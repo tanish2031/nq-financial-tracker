@@ -145,6 +145,11 @@ input.inp:focus,select.inp:focus,textarea.inp:focus{border-color:var(--primary)}
 .tl{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;color:var(--text2)}
 .tl.grand{font-size:15px;font-weight:700;color:var(--text);border-top:1px solid var(--border);padding-top:10px;margin-top:4px}
 .aw{font-size:11.5px;color:var(--text2);font-style:italic;margin-top:6px;line-height:1.5}
+/* Projection KPI tiles */
+.kc{padding:16px 18px;display:flex;flex-direction:column;gap:4px}
+.kl{font-size:11.5px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em}
+.kv{font-size:22px;font-weight:800;line-height:1.2;font-variant-numeric:tabular-nums;color:var(--text)}
+.kb{font-size:11.5px;color:var(--text3);margin-top:2px}
 /* Ageing */
 .agb{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px}
 @media(max-width:600px){.agb{grid-template-columns:repeat(2,1fr)}}
@@ -1893,16 +1898,39 @@ function genMOU(){
 function downloadMOU(){
   const clName=document.getElementById('mou-cl-name').value.trim()||'MOU';
   const bodyContent=document.getElementById('mou-body').innerHTML;
-  let pf=document.getElementById('_mou_frame');
-  if(pf)pf.remove();
-  pf=document.createElement('iframe');pf.id='_mou_frame';
-  pf.style.cssText='position:fixed;top:0;left:0;width:0;height:0;border:0;visibility:hidden';
-  document.body.appendChild(pf);
-  const win=pf.contentWindow;
-  win.document.open();
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>MOU - ${clName}</title><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#fff;font-family:Arial,sans-serif}@page{size:A4;margin:15mm}img{max-width:100%;height:auto}</style></head><body>${bodyContent}</body></html>`);
-  win.document.close();
-  setTimeout(()=>{try{win.focus();win.print();}catch(e){}},700);
+  // Build a hidden render container with exact A4 width so html2canvas captures proper layout
+  let rc=document.getElementById('_mou_render');
+  if(rc)rc.remove();
+  rc=document.createElement('div');rc.id='_mou_render';
+  rc.style.cssText='position:fixed;left:-9999px;top:0;width:794px;background:#fff;font-family:Arial,sans-serif;font-size:13px;color:#000;padding:40px;box-sizing:border-box;z-index:-1';
+  rc.innerHTML=bodyContent;
+  document.body.appendChild(rc);
+  // Dynamically load html2canvas + jsPDF then render
+  function loadScript(src,cb){
+    if(document.querySelector('script[src="'+src+'"]')){cb();return;}
+    const s=document.createElement('script');s.src=src;s.onload=cb;document.head.appendChild(s);
+  }
+  loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',function(){
+    loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',function(){
+      html2canvas(rc,{scale:2,useCORS:true,backgroundColor:'#ffffff'}).then(function(canvas){
+        rc.remove();
+        const {jsPDF}=window.jspdf;
+        const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+        const pageW=pdf.internal.pageSize.getWidth();
+        const pageH=pdf.internal.pageSize.getHeight();
+        const imgW=pageW;
+        const imgH=(canvas.height*imgW)/canvas.width;
+        let y=0;
+        let remaining=imgH;
+        while(remaining>0){
+          if(y>0)pdf.addPage();
+          pdf.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',0,y>0?-(y):0,imgW,imgH);
+          y+=pageH;remaining-=pageH;
+        }
+        pdf.save('MOU-'+clName+'.pdf');
+      }).catch(function(e){rc.remove();alert('PDF generation failed: '+e.message);});
+    });
+  });
 }
 
 // ─── PDF INVOICE GENERATOR ──────────────────────────────────────────────
