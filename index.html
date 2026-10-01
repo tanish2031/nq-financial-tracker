@@ -684,6 +684,22 @@ window.addEventListener('load',()=>{
   var fav=document.createElement('link');fav.rel='icon';fav.type='image/png';fav.href=AI_LOGO_URI;document.head.appendChild(fav);
   // Set login logo
   var li=document.getElementById('login-ai-logo');if(li)li.src=AI_LOGO_URI;
+  // Restore session — must run here because login HTML is after the script block
+  try{
+    const ls=JSON.parse(localStorage.getItem('bt-user')||'null');
+    const ss=JSON.parse(sessionStorage.getItem('bt-user')||'null');
+    const s=ls||ss;
+    if(s){
+      var sn=document.getElementById('sb-name');if(sn)sn.textContent=s.name;
+      var av=document.getElementById('sb-av');if(av)av.textContent=s.initials;
+      var lsc=document.getElementById('login-screen');if(lsc)lsc.style.display='none';
+    }
+    if(localStorage.getItem('bt-remember')==='1'&&ls){
+      var uField=USERS.find(x=>x.name===ls.name);
+      var lu=document.getElementById('l-user');if(lu&&uField)lu.value=uField.user;
+      var lr=document.getElementById('l-remember');if(lr)lr.checked=true;
+    }
+  }catch(e){}
 });
 
 // ─── DELETE CONFIRM (replaces confirm() which is blocked in iframes) ────
@@ -1352,26 +1368,8 @@ function doLogout(){
   document.getElementById('l-remember').checked=false;
   document.getElementById('login-screen').style.display='flex';
 }
-// Auto-restore session (check localStorage first, then sessionStorage)
-
-(function(){
-  try{
-    const ls=JSON.parse(localStorage.getItem('bt-user')||'null');
-    const ss=JSON.parse(sessionStorage.getItem('bt-user')||'null');
-    const s=ls||ss;
-    if(s){
-      document.getElementById('sb-name').textContent=s.name;
-      document.getElementById('sb-av').textContent=s.initials;
-      document.getElementById('login-screen').style.display='none';
-    }
-    // Pre-fill username if remembered
-    if(localStorage.getItem('bt-remember')==='1'&&ls){
-      const uField=USERS.find(x=>x.name===ls.name);
-      if(uField){document.getElementById('l-user').value=uField.user;}
-      document.getElementById('l-remember').checked=true;
-    }
-  }catch(e){}
-})();
+// Session restore is handled in window.addEventListener('load') above
+// (login HTML is after the script block, so getElementById works only after load)
 
 // ─── PROJECTIONS ─────────────────────────────────────────────────────────
 // Only seed default deals if none saved
