@@ -365,7 +365,7 @@ input.inp:focus,select.inp:focus,textarea.inp:focus{border-color:var(--primary)}
           </div>
         </div></div>
         <!-- Hidden fixed fields -->
-        <input type="hidden" id="mou-sp-legal" value="AI Evoked (OPC) Private Limited">
+        <input type="hidden" id="mou-sp-legal" value="AI Evoked (OPC) Private Limited" data-dynamic="true">
         <input type="hidden" id="mou-sp-brand" value="Next Quarter">
         <input type="hidden" id="mou-rep1" value="Pragun Daniel Dass">
         <input type="hidden" id="mou-rep2" value="Tanish Mehta">
@@ -391,13 +391,15 @@ Offer Visibility Optimisation (COD/Shipping clarity)</textarea>
       <div class="ph"><div class="pt">Settings</div></div>
       <div style="max-width:600px;display:flex;flex-direction:column;gap:16px">
         <div class="card"><div class="ch"><span class="ct">Company Profile</span></div><div class="cb" style="display:flex;flex-direction:column;gap:12px">
-          <div class="fr"><div class="fg"><label class="lbl">Company Name</label><input class="inp" value="Techwave Solutions Pvt Ltd"></div><div class="fg"><label class="lbl">GSTIN</label><input class="inp" value="27AABCT1332L1ZS"></div></div>
-          <div class="fr"><div class="fg"><label class="lbl">PAN</label><input class="inp" value="AABCT1332L"></div><div class="fg"><label class="lbl">Invoice Prefix</label><input class="inp" value="TW"></div></div>
-          <div class="fr"><div class="fg"><label class="lbl">State</label><input class="inp" value="Maharashtra"></div><div class="fg"><label class="lbl">Payment Terms (days)</label><input class="inp" type="number" value="30"></div></div>
+          <div class="fr"><div class="fg"><label class="lbl">Company Name</label><input class="inp" id="st-coname" value="AI Evoked (OPC) Private Limited"></div><div class="fg"><label class="lbl">GSTIN</label><input class="inp" id="st-gstin" value="07ABDCA1424H1Z3"></div></div>
+          <div class="fr"><div class="fg"><label class="lbl">PAN</label><input class="inp" id="st-pan" value="ABDCA1424H"></div><div class="fg"><label class="lbl">Invoice Prefix</label><input class="inp" id="st-prefix" value="AE"></div></div>
+          <div class="fr"><div class="fg"><label class="lbl">State</label><input class="inp" id="st-state" value="Delhi"></div><div class="fg"><label class="lbl">Payment Terms (days)</label><input class="inp" id="st-terms" type="number" value="15"></div></div>
+          <div class="fr"><div class="fg"><label class="lbl">Email</label><input class="inp" id="st-email" value="contact@aievoked.com"></div><div class="fg"><label class="lbl">Phone</label><input class="inp" id="st-phone" value="+91 92661 01567"></div></div>
+          <div class="fg"><label class="lbl">Address</label><input class="inp" id="st-addr" value="12-E, PKT-1, Second Floor, Mayur Vihar Phase-I, East Delhi, New Delhi - 110091"></div>
         </div></div>
         <div class="card"><div class="ch"><span class="ct">Bank & Payment</span></div><div class="cb" style="display:flex;flex-direction:column;gap:12px">
-          <div class="fr"><div class="fg"><label class="lbl">Bank Name</label><input class="inp" value="HDFC Bank"></div><div class="fg"><label class="lbl">Account Number</label><input class="inp" value="50200012345678"></div></div>
-          <div class="fr"><div class="fg"><label class="lbl">IFSC</label><input class="inp" value="HDFC0001234"></div><div class="fg"><label class="lbl">UPI ID</label><input class="inp" value="techwave@hdfcbank"></div></div>
+          <div class="fr"><div class="fg"><label class="lbl">Bank Name</label><input class="inp" id="st-bank" value="Kotak Mahindra Bank Limited"></div><div class="fg"><label class="lbl">Account Number</label><input class="inp" id="st-acc" value="8750530938"></div></div>
+          <div class="fr"><div class="fg"><label class="lbl">IFSC</label><input class="inp" id="st-ifsc" value="KKBK0000203"></div><div class="fg"><label class="lbl">UPI ID</label><input class="inp" id="st-upi" value="9266101567@axl"></div></div>
         </div></div>
         <div class="card"><div class="ch"><span class="ct">Email / WhatsApp</span></div><div class="cb" style="display:flex;flex-direction:column;gap:12px">
           <div class="fr"><div class="fg"><label class="lbl">SMTP Host</label><input class="inp" placeholder="smtp.gmail.com"></div><div class="fg"><label class="lbl">Port</label><input class="inp" placeholder="587"></div></div>
@@ -604,7 +606,7 @@ const DB={
  payslips:[],
  mous:[],
  invCtr:11,
-settings:{logoNQ:'',logoAI:'',companyName:'Next Quarter · AI Evoked'},
+settings:{logoNQ:'',logoAI:'',companyName:'Next Quarter · AI Evoked',co:null,invPrefix:'TW',defaultTerms:30},
 };
 
 // ─── SUPABASE ────────────────────────────────────────────────────────────
@@ -640,20 +642,115 @@ async function syncFromDB(){
       sb.from('settings').select('*'),
       sb.from('counters').select('*'),
     ]);
-    if(cl.data&&cl.data.length){DB.clients=cl.data.map(r=>({id:r.id,name:r.name,email:r.email||'',phone:r.phone||'',gstin:r.gstin||'',state:r.state||'',billingAddress:r.address||'',paymentTerms:30}));}
-    if(inv.data&&inv.data.length){DB.invoices=inv.data.map(r=>({id:r.id,num:r.id,clientId:r.client_id,date:r.date,due:r.due_date,status:r.status,subtotal:r.subtotal||0,grand:r.grand||0,totalTax:r.tax||0,cgst:0,sgst:0,igst:r.tax||0,paid:0,lines:(r.invoice_items||[]).map(l=>({desc:l.description,qty:l.qty,rate:l.rate,total:l.amount}))}));}
-    if(pay.data&&pay.data.length){DB.payments=pay.data.map(r=>({id:'p'+r.id,invoiceId:r.invoice_id,date:r.date,amount:r.amount,mode:r.method||'BANK',ref:r.ref||''}));}
-    if(exp.data&&exp.data.length){DB.expenses=exp.data.map(r=>({id:'x'+r.id,date:r.date,amount:r.amount,cat:r.category||'',vendor:r.vendor||'',gst:r.gst||0,notes:r.notes||'',mode:'BANK'}));}
-    if(emp.data&&emp.data.length){DB.employees=emp.data.map(r=>({id:'e'+r.id,name:r.name,desig:r.role||'',basic:r.basic||0,hra:r.hra||0,allow:r.allowances||0,pf:12}));}
-    if(ps.data&&ps.data.length){DB.payslips=ps.data.map(r=>({id:'ps'+r.id,empId:'e'+r.employee_id,month:r.month,gross:r.gross||0,deductions:r.deductions||0,net:r.net||0,paidOn:r.paid_on}));}
-    if(dl.data&&dl.data.length){DB.deals=dl.data.map(r=>({id:r.id,title:r.title,client:r.client||'',value:r.value||0,stage:r.stage||'lead',prob:r.probability||0,close:r.expected_close||'',notes:r.notes||''}));}
+    // Merge helper: take Supabase rows as truth but keep any local records not yet in Supabase
+    function mergeById(sbRows,localArr){
+      const sbIds=new Set(sbRows.map(r=>r._id));
+      const orphans=localArr.filter(r=>!sbIds.has(r.id)&&!r.supabaseId);
+      return [...sbRows,...orphans];
+    }
+    // Build paid amounts from payments
+    const paidMap={};
+    if(pay.data){pay.data.forEach(p=>{paidMap[p.invoice_id]=(paidMap[p.invoice_id]||0)+p.amount;});}
+
+    if(cl.data&&cl.data.length){
+      const sbClients=cl.data.map(r=>({_id:r.id,id:r.id,name:r.name,email:r.email||'',phone:r.phone||'',gstin:r.gstin||'',state:r.state||'',billingAddress:r.address||'',paymentTerms:30}));
+      DB.clients=mergeById(sbClients,DB.clients).map(({_id,...r})=>r);
+    } else {
+      // Supabase has no clients — push any local ones up
+      for(const c of DB.clients)sbUpsert('clients',{id:c.id,name:c.name,email:c.email,phone:c.phone,gstin:c.gstin,state:c.state,address:c.billingAddress});
+    }
+    if(inv.data&&inv.data.length){
+      const sbInv=inv.data.map(r=>{
+        const ig=r.tax_type==='igst';
+        return{_id:r.id,id:r.id,num:r.invoice_number||r.id,clientId:r.client_id,date:r.date,due:r.due_date,status:r.status,subtotal:r.subtotal||0,grand:r.grand||0,totalTax:r.tax||0,cgst:ig?0:(r.tax||0)/2,sgst:ig?0:(r.tax||0)/2,igst:ig?(r.tax||0):0,paid:paidMap[r.id]||0,lines:(r.invoice_items||[]).map(l=>({desc:l.description,qty:l.qty,rate:l.rate,hsn:l.hsn||'',tax:l.tax_rate||18,total:l.amount}))};
+      });
+      DB.invoices=mergeById(sbInv,DB.invoices).map(({_id,...r})=>r);
+    }
+    if(pay.data&&pay.data.length){
+      const sbPay=pay.data.map(r=>({_id:'p'+r.id,id:'p'+r.id,supabaseId:r.id,invoiceId:r.invoice_id,date:r.date,amount:r.amount,mode:r.method||'BANK',ref:r.ref||''}));
+      DB.payments=mergeById(sbPay,DB.payments).map(({_id,...r})=>r);
+    }
+    if(exp.data&&exp.data.length){
+      const sbExp=exp.data.map(r=>({_id:'x'+r.id,id:'x'+r.id,supabaseId:r.id,date:r.date,amount:r.amount,cat:r.category||'',vendor:r.vendor||'',gst:r.gst||0,notes:r.notes||'',mode:'BANK'}));
+      DB.expenses=mergeById(sbExp,DB.expenses).map(({_id,...r})=>r);
+    }
+    if(emp.data&&emp.data.length){
+      const sbEmp=emp.data.map(r=>({_id:'e'+r.id,id:'e'+r.id,supabaseId:r.id,name:r.name,desig:r.role||'',basic:r.basic||0,hra:r.hra||0,allow:r.allowances||0,pf:12}));
+      DB.employees=mergeById(sbEmp,DB.employees).map(({_id,...r})=>r);
+    }
+    if(ps.data&&ps.data.length){
+      const sbPs=ps.data.map(r=>{
+        const mp=r.month?r.month.split('-'):[2026,1];
+        return{_id:'ps'+r.id,id:'ps'+r.id,supabaseId:r.id,eid:'e'+r.employee_id,month:parseInt(mp[1]),year:parseInt(mp[0]),gross:r.gross||0,deductions:r.deductions||0,net:r.net||0,paidOn:r.paid_on,status:r.paid_on?'PAID':'DRAFT'};
+      });
+      DB.payslips=mergeById(sbPs,DB.payslips).map(({_id,...r})=>r);
+    }
+    if(dl.data&&dl.data.length){
+      const sbDl=dl.data.map(r=>({_id:r.id,id:r.id,title:r.title,client:r.client||'',value:r.value||0,stage:r.stage||'lead',prob:r.probability||0,close:r.expected_close||'',notes:r.notes||''}));
+      DB.deals=mergeById(sbDl,DB.deals).map(({_id,...r})=>r);
+    }
+    // Push any local-only records that didn't make it to Supabase yet
+    DB.clients.filter(c=>!c.supabaseId&&c.id.startsWith('c')).forEach(c=>sbUpsert('clients',{id:c.id,name:c.name,email:c.email,phone:c.phone,gstin:c.gstin,state:c.state,address:c.billingAddress}));
     if(st.data){st.data.forEach(r=>{if(r.key in DB.settings)DB.settings[r.key]=r.value||'';});}
     if(ct.data){ct.data.forEach(r=>{if(r.key==='invCtr')DB.invCtr=r.value;if(r.key==='dealCtr')DB.dealCtr=r.value;});}
+    // Load ae_* keys from Supabase into CO
+    if(st.data){
+      const g=k=>(st.data.find(r=>r.key===k)||{}).value;
+      const aeMap={nameOld:'ae_company_name_old',nameNew:'ae_company_name_new',gstin:'ae_gstin',pan:'ae_pan',
+        email:'ae_email',phone:'ae_phone',bankName:'ae_bank_name',bankIfsc:'ae_bank_ifsc',
+        bankAccType:'ae_bank_account_type',upi:'ae_upi',bankAcc:'ae_bank_account_no'};
+      Object.entries(aeMap).forEach(([f,k])=>{const v=g(k);if(v)CO[f]=v;});
+    }
+    // Restore saved company profile from settings (manual saves override ae_*)
+    if(DB.settings.co){try{const c=typeof DB.settings.co==='string'?JSON.parse(DB.settings.co):DB.settings.co;Object.assign(CO,c);}catch(e){}}
     persist();
     // re-render active tab
     const active=document.querySelector('.ni.active');
     if(active)active.click();
   }catch(e){console.warn('Supabase sync error',e);}
+}
+
+// Push all local data to Supabase (called when Supabase is empty on load)
+async function pushLocalToSupabase(){
+  try{
+    for(const c of DB.clients){
+      await sb.from('clients').upsert({id:c.id,name:c.name,email:c.email,phone:c.phone,gstin:c.gstin,state:c.state,address:c.billingAddress},{onConflict:'id'});
+    }
+    for(const i of DB.invoices){
+      const ig=i.igst>0;
+      await sb.from('invoices').upsert({id:i.id,client_id:i.clientId,date:i.date,due_date:i.due,tax_type:ig?'igst':'cgst_sgst',status:i.status,subtotal:i.subtotal,tax:i.totalTax,grand:i.grand},{onConflict:'id'});
+      if(i.lines&&i.lines.length){
+        await sb.from('invoice_items').delete().eq('invoice_id',i.id);
+        await sb.from('invoice_items').insert(i.lines.map(l=>({invoice_id:i.id,description:l.desc,qty:l.qty,rate:l.rate,amount:l.total||Math.round(l.qty*l.rate*(1+(l.tax||18)/100))})));
+      }
+    }
+    for(const p of DB.payments){
+      if(p.supabaseId){
+        await sb.from('payments').upsert({id:p.supabaseId,invoice_id:p.invoiceId,date:p.date,amount:p.amount,method:p.mode,ref:p.ref},{onConflict:'id'});
+      }else{
+        const{data:rows}=await sb.from('payments').insert({invoice_id:p.invoiceId,date:p.date,amount:p.amount,method:p.mode,ref:p.ref}).select('id');
+        if(rows&&rows[0])p.supabaseId=rows[0].id;
+      }
+    }
+    for(const e of DB.expenses){
+      if(e.supabaseId){
+        await sb.from('expenses').upsert({id:e.supabaseId,date:e.date,category:e.cat,vendor:e.vendor,amount:e.amount,gst:e.gst,notes:e.notes},{onConflict:'id'});
+      }else{
+        const{data:rows}=await sb.from('expenses').insert({date:e.date,category:e.cat,vendor:e.vendor,amount:e.amount,gst:e.gst,notes:e.notes}).select('id');
+        if(rows&&rows[0])e.supabaseId=rows[0].id;
+      }
+    }
+    for(const em of DB.employees){
+      if(em.supabaseId){
+        await sb.from('employees').upsert({id:em.supabaseId,name:em.name,role:em.desig,basic:em.basic,hra:em.hra,allowances:em.allow},{onConflict:'id'});
+      }else{
+        const{data:rows}=await sb.from('employees').insert({name:em.name,role:em.desig,basic:em.basic,hra:em.hra,allowances:em.allow}).select('id');
+        if(rows&&rows[0])em.supabaseId=rows[0].id;
+      }
+    }
+    persist();
+    toast('Local data pushed to cloud.','success');
+  }catch(e){console.warn('pushLocalToSupabase error',e);}
 }
 
 function persist(){
@@ -672,8 +769,18 @@ function toast(msg,type){
 }
 
 // Push a single record to Supabase (fire and forget)
-async function sbUpsert(table,data){try{await sb.from(table).upsert(data);}catch(e){console.warn('sbUpsert',e);}}
+async function sbUpsert(table,data){try{const r=await sb.from(table).upsert(data);if(r.error)console.warn('sbUpsert',table,r.error.message);}catch(e){console.warn('sbUpsert',e);}}
 async function sbDelete(table,id){try{await sb.from(table).delete().eq('id',id);}catch(e){console.warn('sbDelete',e);}}
+// Insert to a table with auto-increment integer PK; stores returned id as record.supabaseId
+async function sbInsert(table,data,localRecord){
+  try{
+    const{data:rows,error}=await sb.from(table).insert(data).select('id');
+    if(error){console.warn('sbInsert',table,error.message);return;}
+    if(rows&&rows[0]&&localRecord){localRecord.supabaseId=rows[0].id;persist();}
+  }catch(e){console.warn('sbInsert',e);}
+}
+// Upsert a settings key/value pair (for shared settings like logos)
+async function sbSetting(key,value){try{await sb.from('settings').upsert({key,value},{onConflict:'key'});}catch(e){console.warn('sbSetting',e);}}
 
 function pR(fn){fn();persist();}
 
@@ -732,7 +839,7 @@ function renderSec(s){
   if(s==='payroll')renderPayroll();
   if(s==='reports')renderReports();
   if(s==='ledger')renderLedger();
-  if(s==='settings')renderSettingsLogo();
+  if(s==='settings'){renderSettingsLogo();loadSettingsForm();}
   if(s==='projections')renderProjections();
   if(s==='mou'){
     const d=document.getElementById('mou-date');
@@ -776,7 +883,7 @@ function renderDash(){
   const ovdAmt=ovd.reduce((s,i)=>s+(i.grand-i.paid),0);
   const unpaid=invs.filter(i=>['SENT','PARTIALLY_PAID','OVERDUE'].includes(i.status)||isOverdue(i));
   const unpaidAmt=unpaid.reduce((s,i)=>s+(i.grand-i.paid),0);
-  const payrollAmt=DB.payslips.filter(ps=>ps.net>0&&inR(ps.paidOn||((ps.month||'').substring(0,7)+'-01'),r)).reduce((s,ps)=>s+ps.net,0);
+  const payrollAmt=DB.payslips.filter(ps=>ps.net>0&&inR(ps.paidOn||(ps.year+'-'+(ps.month<10?'0':'')+ps.month+'-01'),r)).reduce((s,ps)=>s+ps.net,0);
   const expAmt=exps.reduce((s,e)=>s+e.amount,0)+payrollAmt;
   const net=rcvd-expAmt;
   document.getElementById('s-billed').textContent=inrK(billed);
@@ -883,7 +990,8 @@ function addClient(){
   const editId=document.getElementById('c-n').dataset.editId;
   if(editId){
     const c=DB.clients.find(x=>x.id===editId);
-    if(c){Object.assign(c,{name:n,gstin:document.getElementById('c-g').value,state:document.getElementById('c-st').value,paymentTerms:parseInt(document.getElementById('c-pt').value),email:document.getElementById('c-em').value,phone:document.getElementById('c-ph').value,billingAddress:document.getElementById('c-ad').value});}
+    if(c){Object.assign(c,{name:n,gstin:document.getElementById('c-g').value,state:document.getElementById('c-st').value,paymentTerms:parseInt(document.getElementById('c-pt').value),email:document.getElementById('c-em').value,phone:document.getElementById('c-ph').value,billingAddress:document.getElementById('c-ad').value});
+    sbUpsert('clients',{id:c.id,name:c.name,email:c.email,phone:c.phone,gstin:c.gstin,state:c.state,address:c.billingAddress});}
     delete document.getElementById('c-n').dataset.editId;
     document.querySelector('#m-client .mt').textContent='Add Client';
   }else{
@@ -980,7 +1088,7 @@ function recPay(){
   const amt=Math.round(parseFloat(document.getElementById('p-a').value)*100);
   const newPay={id:'p'+Date.now(),invoiceId:activeInv,date:document.getElementById('p-d').value,amount:amt,mode:document.getElementById('p-m').value,ref:document.getElementById('p-r').value};
   DB.payments.push(newPay);
-  sbUpsert('payments',{id:newPay.id,invoice_id:newPay.invoiceId,date:newPay.date,amount:newPay.amount,method:newPay.mode,ref:newPay.ref});
+  sbInsert('payments',{invoice_id:newPay.invoiceId,date:newPay.date,amount:newPay.amount,method:newPay.mode,ref:newPay.ref||''},newPay);
   i.paid+=amt;i.status=i.paid>=i.grand?'PAID':'PARTIALLY_PAID';
   persist();closeM('m-pay');renderInvTable();renderPays();renderDash();
 }
@@ -1021,7 +1129,7 @@ function saveInv(status){
   if(editId){
     const inv=DB.invoices.find(x=>x.id===editId);
     if(inv){inv.num=customNum||inv.num;inv.clientId=cid;inv.date=document.getElementById('i-dt').value;inv.due=document.getElementById('i-dd').value;inv.status=status;inv.subtotal=sub;inv.cgst=ig?0:tax/2;inv.sgst=ig?0:tax/2;inv.igst=ig?tax:0;inv.totalTax=tax;inv.grand=sub+tax;inv.lines=lines;
-      sbUpsert('invoices',{id:inv.id,num:inv.num,client_id:inv.clientId,date:inv.date,due_date:inv.due,tax_type:ig?'igst':'cgst',status:inv.status,subtotal:inv.subtotal,tax:inv.totalTax,grand:inv.grand});}
+      sbUpsert('invoices',{id:inv.id,client_id:inv.clientId,date:inv.date,due_date:inv.due,tax_type:ig?'igst':'cgst_sgst',status:inv.status,subtotal:inv.subtotal,tax:inv.totalTax,grand:inv.grand});}
     delete document.getElementById('m-invoice').dataset.editId;
     document.querySelector('#m-invoice .mt').textContent='New Invoice';
     document.querySelector('#m-invoice .mf').innerHTML='<button class="btn btn-o" onclick="closeM(\'m-invoice\')">Cancel</button><button class="btn btn-o" onclick="saveInv(\'DRAFT\')">Save Draft</button><button class="btn btn-p" onclick="saveInv(\'SENT\')">Create & Send</button>';
@@ -1033,7 +1141,8 @@ function saveInv(status){
     if(!customNum)DB.invCtr++;
     const ni={id:'i'+Date.now(),num:finalNum,clientId:cid,date:invDate,due:document.getElementById('i-dd').value,status,subtotal:sub,cgst:ig?0:tax/2,sgst:ig?0:tax/2,igst:ig?tax:0,totalTax:tax,grand:g,paid:0,lines};
     DB.invoices.unshift(ni);
-    sbUpsert('invoices',{id:ni.id,num:ni.num,client_id:ni.clientId,date:ni.date,due_date:ni.due,tax_type:ig?'igst':'cgst',status:ni.status,subtotal:ni.subtotal,tax:ni.totalTax,grand:ni.grand});
+    sbUpsert('invoices',{id:ni.id,client_id:ni.clientId,date:ni.date,due_date:ni.due,tax_type:ig?'igst':'cgst_sgst',status:ni.status,subtotal:ni.subtotal,tax:ni.totalTax,grand:ni.grand});
+    if(ni.lines&&ni.lines.length){sb.from('invoice_items').insert(ni.lines.map(l=>({invoice_id:ni.id,description:l.desc,qty:l.qty,rate:l.rate,amount:l.total||0,hsn:l.hsn||'',tax_rate:l.tax||18}))).then(r=>{if(r.error)console.warn('invoice_items insert',r.error.message);});}
   }
   persist();closeM('m-invoice');renderInvTable();renderDash();
 }
@@ -1093,7 +1202,7 @@ function renderPays(){
       <td style="text-align:right;font-weight:700;color:var(--green)" class="num">${inr(p.amount)}</td>
       <td style="white-space:nowrap;display:flex;gap:4px;align-items:center">
         <button onclick="editPayment('${p.id}')" style="font-size:12px;padding:3px 9px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--text);cursor:pointer">Edit</button>
-        <button onclick="delConfirm(this,()=>{const _invId='${p.invoiceId}';sbDelete('payments','${p.id}');DB.payments=DB.payments.filter(x=>x.id!=='${p.id}');recalcInvPaid(_invId);persist();renderPays();renderDash();})" style="font-size:12px;padding:3px 9px;border:1px solid var(--red);border-radius:5px;background:var(--surface);color:var(--red);cursor:pointer">Delete</button>
+        <button onclick="delConfirm(this,()=>{const _invId='${p.invoiceId}';const _p=DB.payments.find(x=>x.id==='${p.id}');if(_p?.supabaseId)sbDelete('payments',_p.supabaseId);DB.payments=DB.payments.filter(x=>x.id!=='${p.id}');recalcInvPaid(_invId);persist();renderPays();renderDash();})" style="font-size:12px;padding:3px 9px;border:1px solid var(--red);border-radius:5px;background:var(--surface);color:var(--red);cursor:pointer">Delete</button>
       </td>
     </tr>`;
   }).join('');
@@ -1121,7 +1230,8 @@ function savePayment(){
   p.amount=Math.round(parseFloat(document.getElementById('ep-amount').value||0)*100);
   p.mode=document.getElementById('ep-mode').value;
   p.ref=document.getElementById('ep-ref').value;
-  sbUpsert('payments',{id:p.id,invoice_id:p.invoiceId,date:p.date,amount:p.amount,method:p.mode,ref:p.ref});
+  if(p.supabaseId){sbUpsert('payments',{id:p.supabaseId,invoice_id:p.invoiceId,date:p.date,amount:p.amount,method:p.mode,ref:p.ref||''});}
+  else{sbInsert('payments',{invoice_id:p.invoiceId,date:p.date,amount:p.amount,method:p.mode,ref:p.ref||''},p);}
   recalcInvPaid(p.invoiceId);
   persist();closeM('m-edit-pay');
   renderPays();renderDash();
@@ -1152,7 +1262,7 @@ function renderExp(){
     <td style="color:var(--text2);font-size:12px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.notes||'—'}</td>
     <td style="white-space:nowrap">
       <button onclick="editExp('${e.id}')" style="font-size:12px;padding:3px 9px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--text);cursor:pointer;margin-right:4px">Edit</button>
-      <button onclick="delConfirm(this,()=>{sbDelete('expenses','${e.id}');DB.expenses=DB.expenses.filter(x=>x.id!=='${e.id}');persist();renderExp();})" style="font-size:12px;padding:3px 9px;border:1px solid var(--red);border-radius:5px;background:var(--surface);color:var(--red);cursor:pointer">Delete</button>
+      <button onclick="delConfirm(this,()=>{const _ex=DB.expenses.find(x=>x.id==='${e.id}');if(_ex?.supabaseId)sbDelete('expenses',_ex.supabaseId);DB.expenses=DB.expenses.filter(x=>x.id!=='${e.id}');persist();renderExp();})" style="font-size:12px;padding:3px 9px;border:1px solid var(--red);border-radius:5px;background:var(--surface);color:var(--red);cursor:pointer">Delete</button>
     </td>
   </tr>`).join('');
 }
@@ -1180,7 +1290,7 @@ function addExp(){
   }else{
     const ne={id:'x'+Date.now(),date:document.getElementById('e-d').value,amount:Math.round(a*100),cat:document.getElementById('e-c').value,vendor:document.getElementById('e-v').value,mode:document.getElementById('e-m').value,gst:Math.round(parseFloat(document.getElementById('e-g').value||0)*100),notes:document.getElementById('e-n').value};
     DB.expenses.unshift(ne);
-    sbUpsert('expenses',{date:ne.date,amount:ne.amount,category:ne.cat,vendor:ne.vendor,gst:ne.gst,notes:ne.notes});
+    sbInsert('expenses',{date:ne.date,amount:ne.amount,category:ne.cat,vendor:ne.vendor,gst:ne.gst,notes:ne.notes},ne);
   }
   persist();closeM('m-expense');
   const cf=document.getElementById('exp-cf');while(cf.options.length>1)cf.remove(1);
@@ -1229,7 +1339,7 @@ function addEmp(){
   } else {
     const nem={id:'e'+Date.now(),name:n,desig:document.getElementById('em-d').value,basic:Math.round(parseFloat(document.getElementById('em-b').value||0)*100),hra:Math.round(parseFloat(document.getElementById('em-h').value||0)*100),allow:Math.round(parseFloat(document.getElementById('em-a').value||0)*100),pf:parseFloat(document.getElementById('em-p').value||12)};
     DB.employees.push(nem);
-    sbUpsert('employees',{name:nem.name,role:nem.desig,basic:nem.basic,hra:nem.hra,allowances:nem.allow});
+    sbInsert('employees',{name:nem.name,role:nem.desig,basic:nem.basic,hra:nem.hra,allowances:nem.allow},nem);
   }
   persist();closeM('m-emp');renderPayroll();
 }
@@ -1248,7 +1358,9 @@ function editEmp(id){
   openM('m-emp');
 }
 function deleteEmp(id){
-  sbDelete('employees',id.replace('e',''));DB.employees=DB.employees.filter(x=>x.id!==id);
+  const _emp=DB.employees.find(x=>x.id===id);
+  if(_emp?.supabaseId)sbDelete('employees',_emp.supabaseId);
+  DB.employees=DB.employees.filter(x=>x.id!==id);
   DB.payslips=DB.payslips.filter(x=>x.eid!==id);
   persist();renderPayroll();
 }
@@ -1260,7 +1372,11 @@ function runPR(){
     const {gross,pf,esi,pt,net}=calcNet(e);
     const newSlip={id:'ps'+Date.now()+e.id,eid:e.id,month:m,year:y,gross,pf,esi,pt,net,status:'DRAFT'};
     DB.payslips.push(newSlip);
-    sbUpsert('payslips',{id:newSlip.id,employee_id:e.id.replace('e',''),month:m,year:y,gross,deductions:pf+esi+pt,net,paid_on:null});
+    const empSupaId=e.supabaseId;
+    if(empSupaId){
+      const mStr=y+'-'+(m<10?'0':'')+m;
+      sbInsert('payslips',{employee_id:empSupaId,month:mStr,gross,deductions:pf+esi+pt,net,paid_on:null},newSlip);
+    }
     ct++;
   });
   persist();closeM('m-run-pr');renderPayroll();
@@ -1814,7 +1930,7 @@ function genMOU(){
   const clAddr=document.getElementById('mou-cl-addr').value.trim()||'[Client Address]';
   const dateVal=document.getElementById('mou-date').value||new Date().toISOString().slice(0,10);
   const days=parseInt(document.getElementById('mou-days').value)||7;
-  const spLegal=document.getElementById('mou-sp-legal').value.trim()||'AI Evoked (OPC) Private Limited';
+  const spLegal=CO.nameOld||CO.name||document.getElementById('mou-sp-legal').value.trim()||'AI Evoked (OPC) Private Limited';
   const spBrand=document.getElementById('mou-sp-brand').value.trim()||'Next Quarter';
   const rep1=document.getElementById('mou-rep1').value.trim()||'Pragun Daniel Dass';
   const rep2=document.getElementById('mou-rep2').value.trim()||'Tanish Mehta';
@@ -1940,13 +2056,12 @@ function downloadMOU(){
   let rc=document.getElementById('_mou_render');
   if(rc)rc.remove();
   rc=document.createElement('div');rc.id='_mou_render';
-  rc.style.cssText='position:fixed;left:-9999px;top:0;width:794px;background:#fff;font-family:Arial,sans-serif;font-size:13px;color:#000;padding:56px 60px;box-sizing:border-box;z-index:-1;line-height:1.6';
+  rc.style.cssText='position:absolute;left:-9999px;top:0;width:794px;background:#fff;font-family:Arial,sans-serif;font-size:13px;color:#000;padding:56px 60px;box-sizing:border-box;visibility:hidden;pointer-events:none;line-height:1.6';
   rc.innerHTML=bodyContent;
-  // Remove glassmorphism styles from the render clone
   rc.querySelectorAll('*').forEach(el=>{el.style.backdropFilter='';el.style.webkitBackdropFilter='';});
   document.body.appendChild(rc);
   loadPDFLibs(function(){
-    html2canvas(rc,{scale:2.5,useCORS:true,backgroundColor:'#ffffff',windowWidth:794}).then(function(canvas){
+    html2canvas(rc,{scale:2.5,useCORS:true,backgroundColor:'#ffffff',windowWidth:794,logging:false}).then(function(canvas){
       rc.remove();
       const{jsPDF}=window.jspdf;
       const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
@@ -1965,19 +2080,63 @@ let pdfInvId=null;
 
 // Company settings (editable from Settings page — stored here for PDF)
 const CO={
-  name:'Techwave Solutions Pvt Ltd',
-  address:'Plot 42, MIDC Industrial Area',
-  city:'Pune',state:'Maharashtra',pin:'411028',
-  gstin:'27AABCT1332L1ZS',pan:'AABCT1332L',
-  email:'accounts@techwave.in',phone:'+91 20 4567 8900',
-  bankName:'HDFC Bank',bankAcc:'50200012345678',
-  bankIfsc:'HDFC0001234',bankAccType:'Current',
-  upi:'techwave@hdfcbank',
-  terms:'1. Payment is due within 7 days of the invoice date unless otherwise specified.\n2. Late payments may attract interest at 1.5% per month.\n3. All disputes are subject to Maharashtra jurisdiction.'
+  name:'AI Evoked (OPC) Private Limited',
+  nameOld:'AI Evoked (OPC) Private Limited',
+  nameNew:'AI Evoked Private Limited',
+  nameChangeDate:'2026-10-29',
+  address:'12-E, PKT-1, Second Floor, Mayur Vihar Phase-I, East Delhi',
+  city:'New Delhi',state:'Delhi',pin:'110091',
+  gstin:'07ABDCA1424H1Z3',pan:'ABDCA1424H',
+  email:'contact@aievoked.com',phone:'+91 92661 01567',
+  bankName:'Kotak Mahindra Bank Limited',bankAcc:'8750530938',
+  bankIfsc:'KKBK0000203',bankAccType:'Current',upi:'9266101567@axl',
+  terms:'1. Payment is due within 15 days of the invoice date unless otherwise specified.\n2. Late payments may attract interest at 1.5% per month.\n3. All disputes are subject to Delhi jurisdiction.'
 };
+function coNameFor(dateStr){
+  return(dateStr&&dateStr>CO.nameChangeDate)?CO.nameNew:CO.nameOld;
+}
 
 function saveSettings(){
-  toast('Settings saved successfully.','success');
+  const g=id=>document.getElementById(id);
+  const v=id=>(g(id)?.value||'').trim();
+  const coname=v('st-coname');
+  if(coname){CO.name=coname;CO.nameOld=coname;}
+  CO.gstin=v('st-gstin')||CO.gstin;
+  CO.pan=v('st-pan')||CO.pan;
+  CO.state=v('st-state')||CO.state;
+  CO.email=v('st-email')||CO.email;
+  CO.phone=v('st-phone')||CO.phone;
+  CO.address=v('st-addr').split(',')[0]||CO.address;
+  CO.bankName=v('st-bank')||CO.bankName;
+  CO.bankAcc=v('st-acc')||CO.bankAcc;
+  CO.bankIfsc=v('st-ifsc')||CO.bankIfsc;
+  CO.upi=v('st-upi')||CO.upi;
+  const prefix=v('st-prefix');
+  if(prefix)DB.settings.invPrefix=prefix;
+  const terms=parseInt(g('st-terms')?.value)||30;
+  DB.settings.defaultTerms=terms;
+  DB.settings.co=JSON.parse(JSON.stringify(CO));
+  persist();
+  sbSetting('co',JSON.stringify(CO));
+  toast('Settings saved and synced.','success');
+}
+
+function loadSettingsForm(){
+  const g=id=>document.getElementById(id);
+  if(!g('st-coname'))return;
+  g('st-coname').value=CO.nameOld||CO.name;
+  g('st-gstin').value=CO.gstin;
+  g('st-pan').value=CO.pan;
+  g('st-state').value=CO.state;
+  g('st-email').value=CO.email;
+  g('st-phone').value=CO.phone;
+  g('st-addr').value=[CO.address,CO.city,CO.state+' - '+CO.pin].filter(Boolean).join(', ');
+  g('st-bank').value=CO.bankName;
+  g('st-acc').value=CO.bankAcc;
+  g('st-ifsc').value=CO.bankIfsc;
+  g('st-upi').value=CO.upi;
+  if(DB.settings.invPrefix)g('st-prefix').value=DB.settings.invPrefix;
+  if(DB.settings.defaultTerms)g('st-terms').value=DB.settings.defaultTerms;
 }
 
 function renderMOUTracker(){
@@ -2051,17 +2210,22 @@ function renderSettingsLogo(){
 }
 function uploadLogo(input,key){
   if(!input.files||!input.files[0])return;
+  const file=input.files[0];
+  if(file.size>2*1024*1024){toast('Logo must be under 2 MB','error');return;}
   const reader=new FileReader();
   reader.onload=ev=>{
-    if(key==='nq')DB.settings.logoNQ=ev.target.result;
-    else DB.settings.logoAI=ev.target.result;
+    const data=ev.target.result;
+    if(key==='nq')DB.settings.logoNQ=data;
+    else DB.settings.logoAI=data;
     const img=document.getElementById(`logo-${key}-img`);
     const ph=document.getElementById(`logo-${key}-ph`);
-    if(img){img.src=ev.target.result;img.style.display='block';}
+    if(img){img.src=data;img.style.display='block';}
     if(ph)ph.style.display='none';
     persist();
+    sbSetting(key==='nq'?'logoNQ':'logoAI',data);
+    toast('Logo uploaded and synced','success');
   };
-  reader.readAsDataURL(input.files[0]);
+  reader.readAsDataURL(file);
 }
 function removeLogo(key){
   if(key==='nq')DB.settings.logoNQ='';
@@ -2071,6 +2235,7 @@ function removeLogo(key){
   if(img){img.src='';img.style.display='none';}
   if(ph)ph.style.display='';
   persist();
+  sbSetting(key==='nq'?'logoNQ':'logoAI','');
 }
 function getLogoBlock(forDark){
   if(!DB.settings.logoNQ)return forDark?
@@ -2134,7 +2299,7 @@ function openPDF(id){
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px">
       <div style="background:#F5F3FF;border:1px solid #E9D5FF;border-radius:8px;padding:14px 16px">
         <div style="font-size:11px;font-weight:700;color:#6B21A8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Billed By</div>
-        <div style="font-weight:700;font-size:14px;margin-bottom:4px">${e(CO.name,'by-name')}</div>
+        <div style="font-weight:700;font-size:14px;margin-bottom:4px">${e(coNameFor(i.date),'by-name')}</div>
         <div style="font-size:12.5px;color:#444;line-height:1.6">
           <div>Address: ${e(CO.address+', '+CO.city+', '+CO.state+' - '+CO.pin,'by-addr')}</div>
           <div>GSTIN: <b>${e(CO.gstin,'by-gstin')}</b></div>
@@ -2222,7 +2387,7 @@ function openPDF(id){
     <!-- Signature row -->
     <div style="display:flex;justify-content:space-between;align-items:flex-end;padding-top:12px;border-top:1px solid #e5e7eb">
       <div style="font-size:12.5px;color:#777">Receiver's Signature</div>
-      <div style="text-align:right;font-size:13px;font-weight:600">For ${e(CO.name,'sig-name')}</div>
+      <div style="text-align:right;font-size:13px;font-weight:600">For ${e(coNameFor(i.date),'sig-name')}</div>
     </div>
 
   </div>
@@ -2298,19 +2463,25 @@ function removePDFLine(idx){
 function downloadPDF(){
   const inv=DB.invoices.find(x=>x.id===pdfInvId);
   const num=(inv?.num||'invoice').replace(/\//g,'-');
-  // Find the inner invoice content div (inside the modal overlay)
-  const modal=document.getElementById('m-pdf');
-  if(!modal)return;
-  const inner=modal.querySelector(':scope > div');
-  if(!inner)return;
-  // Temporarily hide toolbar for clean capture
+  const body=document.getElementById('pdf-body');
+  if(!body)return;
   const toolbar=document.getElementById('pdf-toolbar');
   if(toolbar)toolbar.style.display='none';
-  // Remove editable outlines
-  modal.querySelectorAll('.editable').forEach(el=>el.style.outline='none');
+  // Strip editable outlines and no-print elements for clean capture
+  document.querySelectorAll('.editable').forEach(el=>el.style.outline='none');
+  document.querySelectorAll('.pdf-no-print').forEach(el=>el.style.display='none');
+  // Clone to an off-screen div so we capture plain white background, no modal chrome
+  let rc=document.getElementById('_inv_render');
+  if(rc)rc.remove();
+  rc=document.createElement('div');rc.id='_inv_render';
+  rc.style.cssText='position:absolute;left:-9999px;top:0;width:794px;background:#fff;opacity:0;pointer-events:none;z-index:-1';
+  rc.innerHTML=body.innerHTML;
+  document.body.appendChild(rc);
   loadPDFLibs(function(){
-    html2canvas(inner,{scale:2,useCORS:true,backgroundColor:'#ffffff',windowWidth:inner.scrollWidth||794,ignoreElements:function(el){return el.classList&&el.classList.contains('pdf-no-print');}}).then(function(canvas){
+    html2canvas(rc,{scale:2,useCORS:true,backgroundColor:'#ffffff',windowWidth:794,logging:false,removeContainer:true}).then(function(canvas){
+      rc.remove();
       if(toolbar)toolbar.style.display='';
+      document.querySelectorAll('.pdf-no-print').forEach(el=>el.style.display='');
       const{jsPDF}=window.jspdf;
       const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
       const pw=pdf.internal.pageSize.getWidth(),ph=pdf.internal.pageSize.getHeight();
@@ -2318,7 +2489,7 @@ function downloadPDF(){
       let y=0,rem=ih;
       while(rem>0){if(y>0)pdf.addPage();pdf.addImage(canvas.toDataURL('image/png'),'PNG',0,y>0?-y:0,pw,ih);y+=ph;rem-=ph;}
       pdf.save(num+'.pdf');
-    }).catch(function(e){if(toolbar)toolbar.style.display='';toast('PDF failed: '+e.message,'error');});
+    }).catch(function(e){rc.remove();if(toolbar)toolbar.style.display='';document.querySelectorAll('.pdf-no-print').forEach(el=>el.style.display='');toast('PDF failed: '+e.message,'error');});
   });
 }
 
