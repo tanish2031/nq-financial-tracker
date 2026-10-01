@@ -6,30 +6,26 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
 :root{
-  --bg:#F5F8FF;--surface:#FFF;--surface2:#EEF3FB;--border:#DDE5F0;
+  /* Forced white theme — no dark mode */
+  color-scheme:light only;
+  --bg:transparent;
+  --surface:rgba(255,255,255,0.68);
+  --surface2:rgba(235,243,255,0.72);
+  --border:rgba(190,213,255,0.55);
   --text:#001931;--text2:#4A6080;--text3:#8BA0B5;
   --sidebar-bg:#001931;--primary:#001931;--primary-h:#003060;
-  --green:#16A34A;--green-bg:#DCFCE7;--amber:#D97706;--amber-bg:#FEF3C7;
-  --red:#DC2626;--red-bg:#FEE2E2;--blue-bg:#DBEAFF;--blue-t:#001931;
-  --shadow:0 1px 3px rgba(0,25,49,.08);--shadow-md:0 4px 6px rgba(0,25,49,.1);
-  --r:10px;--sw:236px;
-}
-@media(prefers-color-scheme:dark){:root:not([data-theme=light]){
-  --bg:#0D1117;--surface:#161B22;--surface2:#21262D;--border:#30363D;
-  --text:#E6EDF3;--text2:#8B949E;--text3:#6E7681;--sidebar-bg:#0D1117;
-  --green-bg:rgba(22,163,74,.18);--amber-bg:rgba(217,119,6,.18);
-  --red-bg:rgba(220,38,38,.18);--blue-bg:rgba(37,99,235,.18);--blue-t:#60A5FA;
-  --shadow:0 1px 3px rgba(0,0,0,.3);--shadow-md:0 4px 6px rgba(0,0,0,.3);
-}}
-:root[data-theme=dark]{
-  --bg:#0D1117;--surface:#161B22;--surface2:#21262D;--border:#30363D;
-  --text:#E6EDF3;--text2:#8B949E;--text3:#6E7681;--sidebar-bg:#0D1117;
-  --green-bg:rgba(22,163,74,.18);--amber-bg:rgba(217,119,6,.18);
-  --red-bg:rgba(220,38,38,.18);--blue-bg:rgba(37,99,235,.18);--blue-t:#60A5FA;
-  --shadow:0 1px 3px rgba(0,0,0,.3);--shadow-md:0 4px 6px rgba(0,0,0,.3);
+  --green:#16A34A;--green-bg:rgba(220,252,231,0.85);
+  --amber:#D97706;--amber-bg:rgba(254,243,199,0.85);
+  --red:#DC2626;--red-bg:rgba(254,226,226,0.85);
+  --blue-bg:rgba(219,234,255,0.85);--blue-t:#001931;
+  --shadow:0 4px 24px rgba(0,25,49,.09),0 1px 2px rgba(0,25,49,.05);
+  --shadow-md:0 8px 32px rgba(0,25,49,.12),0 2px 4px rgba(0,25,49,.06);
+  --glass:rgba(255,255,255,0.65);--glass-border:rgba(209,228,255,0.6);
+  --glass-blur:blur(18px) saturate(180%);
+  --r:12px;--sw:236px;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;font-family:'Public Sans',system-ui,sans-serif;font-size:14px;background:var(--bg);color:var(--text)}
+html,body{height:100%;font-family:'Public Sans',system-ui,sans-serif;font-size:14px;background:linear-gradient(135deg,#ddeeff 0%,#f0f6ff 40%,#e8f2ff 70%,#f5f8ff 100%) fixed;color:var(--text)}
 body{display:flex;overflow:hidden}
 button{font-family:inherit;cursor:pointer;border:none;background:none}
 input,select,textarea{font-family:inherit;font-size:14px}
@@ -56,17 +52,17 @@ nav{flex:1;padding:10px 8px;overflow-y:auto;display:flex;flex-direction:column;g
 .tbtn svg{width:15px;height:15px}
 /* Main */
 #main{flex:1;display:flex;flex-direction:column;min-width:0;height:100vh;overflow:hidden}
-.topbar{display:none;align-items:center;gap:12px;padding:12px 16px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
+.topbar{display:none;align-items:center;gap:12px;padding:12px 16px;background:rgba(255,255,255,0.72);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--glass-border);flex-shrink:0}
 .topbar-menu{width:36px;height:36px;border-radius:8px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;background:var(--surface)}
 .pc{flex:1;overflow-y:auto;padding:24px}
-/* Cards */
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow)}
+/* Cards — liquid glass */
+.card{background:var(--glass);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border:1px solid var(--glass-border);border-radius:var(--r);box-shadow:var(--shadow)}
 .ch{padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
 .ct{font-size:14px;font-weight:600}
 .cb{padding:16px 20px}
 /* Stats */
 .sg{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:14px;margin-bottom:20px}
-.st{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow);cursor:pointer;transition:box-shadow .15s,border-color .15s}
+.st{background:var(--glass);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border:1px solid var(--glass-border);border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow);cursor:pointer;transition:box-shadow .15s,border-color .15s}
 .st:hover{box-shadow:var(--shadow-md);border-color:var(--primary)}
 .sl{font-size:12px;color:var(--text2);font-weight:500;margin-bottom:6px}
 .sv{font-size:22px;font-weight:700;line-height:1.1}
@@ -112,9 +108,9 @@ tbody tr:hover{background:var(--surface2)}
 .fb{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
 .sw_{position:relative;flex:1;min-width:160px}
 .sw_ svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--text3)}
-.si_{width:100%;padding:8px 10px 8px 32px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text);outline:none;transition:border-color .15s}
+.si_{width:100%;padding:8px 10px 8px 32px;border:1px solid var(--glass-border);border-radius:7px;background:rgba(255,255,255,0.75);color:var(--text);outline:none;transition:border-color .15s}
 .si_:focus{border-color:var(--primary)}
-select.fi{padding:8px 10px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text);outline:none;min-width:130px}
+select.fi{padding:8px 10px;border:1px solid var(--glass-border);border-radius:7px;background:rgba(255,255,255,0.75);color:var(--text);outline:none;min-width:130px}
 /* Lists */
 .lg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
 @media(max-width:800px){.lg{grid-template-columns:1fr}}
@@ -125,8 +121,8 @@ select.fi{padding:8px 10px;border:1px solid var(--border);border-radius:7px;back
 .lv{font-size:13px;font-weight:700;text-align:right}
 .lsub2{font-size:11px;color:var(--text3);margin-top:1px;text-align:right}
 /* Modal */
-.ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
-.mo{background:var(--surface);border-radius:12px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-md)}
+.ov{position:fixed;inset:0;background:rgba(0,18,40,.35);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
+.mo{background:rgba(255,255,255,0.88);backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);border:1px solid var(--glass-border);border-radius:12px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-md)}
 .mh{padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
 .mt{font-size:16px;font-weight:700}
 .mc{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);background:var(--surface2);border:none}
@@ -137,11 +133,11 @@ select.fi{padding:8px 10px;border:1px solid var(--border);border-radius:7px;back
 .fr.full{grid-template-columns:1fr}
 .fg{display:flex;flex-direction:column;gap:5px}
 label.lbl{font-size:12px;font-weight:600;color:var(--text2);letter-spacing:.03em;text-transform:uppercase}
-input.inp,select.inp,textarea.inp{padding:8px 10px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text);outline:none;font-size:13.5px;transition:border-color .15s;width:100%}
+input.inp,select.inp,textarea.inp{padding:8px 10px;border:1px solid var(--glass-border);border-radius:7px;background:rgba(255,255,255,0.75);color:var(--text);outline:none;font-size:13.5px;transition:border-color .15s;width:100%}
 input.inp:focus,select.inp:focus,textarea.inp:focus{border-color:var(--primary)}
 /* Invoice detail */
 .im{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
-.mb_{background:var(--surface2);border-radius:8px;padding:12px 14px}
+.mb_{background:rgba(235,243,255,0.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid var(--glass-border);border-radius:8px;padding:12px 14px}
 .ml{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
 .mv{font-size:14px;font-weight:600}
 .tls{display:flex;justify-content:flex-end}
@@ -1272,30 +1268,49 @@ const USERS=[
 function doLogin(){
   const u=(document.getElementById('l-user').value||'').trim().toLowerCase();
   const p=document.getElementById('l-pass').value;
+  const remember=document.getElementById('l-remember').checked;
   const found=USERS.find(x=>x.user===u&&x.pass===p);
   const err=document.getElementById('login-err');
   if(!found){err.textContent='Invalid username or password.';err.style.display='block';document.getElementById('l-pass').value='';return;}
   err.style.display='none';
-  // Store session
-  try{sessionStorage.setItem('bt-user',JSON.stringify({name:found.name,initials:found.initials}));}catch(e){}
+  const sess={name:found.name,initials:found.initials};
+  try{
+    if(remember){
+      localStorage.setItem('bt-user',JSON.stringify(sess));
+      localStorage.setItem('bt-remember','1');
+    } else {
+      sessionStorage.setItem('bt-user',JSON.stringify(sess));
+      localStorage.removeItem('bt-user');
+      localStorage.removeItem('bt-remember');
+    }
+  }catch(e){}
   document.getElementById('sb-name').textContent=found.name;
   document.getElementById('sb-av').textContent=found.initials;
   document.getElementById('login-screen').style.display='none';
 }
 function doLogout(){
-  try{sessionStorage.removeItem('bt-user');}catch(e){}
+  try{sessionStorage.removeItem('bt-user');localStorage.removeItem('bt-user');localStorage.removeItem('bt-remember');}catch(e){}
   document.getElementById('l-user').value='';
   document.getElementById('l-pass').value='';
+  document.getElementById('l-remember').checked=false;
   document.getElementById('login-screen').style.display='flex';
 }
-// Auto-restore session
+// Auto-restore session (check localStorage first, then sessionStorage)
 (function(){
   try{
-    const s=JSON.parse(sessionStorage.getItem('bt-user')||'null');
+    const ls=JSON.parse(localStorage.getItem('bt-user')||'null');
+    const ss=JSON.parse(sessionStorage.getItem('bt-user')||'null');
+    const s=ls||ss;
     if(s){
       document.getElementById('sb-name').textContent=s.name;
       document.getElementById('sb-av').textContent=s.initials;
       document.getElementById('login-screen').style.display='none';
+    }
+    // Pre-fill username if remembered
+    if(localStorage.getItem('bt-remember')==='1'&&ls){
+      const uField=USERS.find(x=>x.name===ls.name);
+      if(uField){document.getElementById('l-user').value=uField.user;}
+      document.getElementById('l-remember').checked=true;
     }
   }catch(e){}
 })();
@@ -2170,34 +2185,41 @@ renderDash();
 </script>
 
 <!-- LOGIN SCREEN -->
-<div id="login-screen" style="position:fixed;inset:0;z-index:99999;background:linear-gradient(135deg,#0E1726 0%,#1a2a4a 100%);display:flex;align-items:center;justify-content:center;font-family:'Inter',system-ui,sans-serif">
-  <div style="background:#fff;border-radius:16px;padding:40px 36px;width:340px;box-shadow:0 24px 64px rgba(0,0,0,.4)">
+<div id="login-screen" style="position:fixed;inset:0;z-index:99999;background:linear-gradient(135deg,#c8deff 0%,#e8f0ff 40%,#d4e8ff 70%,#eef5ff 100%);display:flex;align-items:center;justify-content:center;font-family:'Public Sans',system-ui,sans-serif">
+  <!-- Floating blobs for depth -->
+  <div style="position:absolute;width:400px;height:400px;border-radius:50%;background:rgba(37,99,235,.12);top:-80px;left:-100px;filter:blur(60px);pointer-events:none"></div>
+  <div style="position:absolute;width:300px;height:300px;border-radius:50%;background:rgba(99,157,255,.10);bottom:-60px;right:-60px;filter:blur(50px);pointer-events:none"></div>
+  <div style="background:rgba(255,255,255,0.72);backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);border:1px solid rgba(210,228,255,0.7);border-radius:20px;padding:40px 36px;width:360px;box-shadow:0 8px 40px rgba(0,25,80,.14),0 2px 8px rgba(0,25,80,.08);position:relative;z-index:1">
     <div style="text-align:center;margin-bottom:28px">
-      <div style="width:48px;height:48px;background:#2563EB;border-radius:12px;margin:0 auto 12px;display:flex;align-items:center;justify-content:center">
-        <svg viewBox="0 0 24 24" fill="#fff" style="width:26px;height:26px"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+      <div style="width:52px;height:52px;background:linear-gradient(135deg,#1D4ED8,#2563EB);border-radius:14px;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(37,99,235,.35)">
+        <svg viewBox="0 0 24 24" fill="#fff" style="width:27px;height:27px"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
       </div>
-      <div style="font-size:22px;font-weight:800;color:#001931;letter-spacing:1px">NQ Financial Tracker</div>
-      <div style="font-size:13px;color:#64748B;margin-top:4px">Next Quarter · AI Evoked</div>
+      <div style="font-size:21px;font-weight:800;color:#001931;letter-spacing:.5px">NQ Financial Tracker</div>
+      <div style="font-size:12.5px;color:#64748B;margin-top:5px">Next Quarter · AI Evoked</div>
     </div>
-    <div id="login-err" style="display:none;background:#FEE2E2;color:#DC2626;padding:8px 12px;border-radius:8px;font-size:13px;margin-bottom:14px;text-align:center"></div>
-    <div style="display:flex;flex-direction:column;gap:12px">
+    <div id="login-err" style="display:none;background:rgba(254,226,226,0.85);color:#DC2626;padding:8px 12px;border-radius:8px;font-size:13px;margin-bottom:14px;text-align:center;border:1px solid rgba(220,38,38,.2)"></div>
+    <div style="display:flex;flex-direction:column;gap:13px">
       <div>
-        <label style="font-size:12px;font-weight:600;color:#475569;display:block;margin-bottom:5px">Username</label>
+        <label style="font-size:11.5px;font-weight:700;color:#475569;display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">Username</label>
         <input id="l-user" type="text" placeholder="Enter username" autocomplete="username"
-          style="width:100%;padding:10px 12px;border:1.5px solid #E2E8F0;border-radius:8px;font-size:14px;outline:none;transition:border .15s"
-          onfocus="this.style.borderColor='#2563EB'" onblur="this.style.borderColor='#E2E8F0'"
+          style="width:100%;padding:10px 13px;border:1.5px solid rgba(190,213,255,.7);border-radius:9px;font-size:14px;outline:none;transition:border .15s;background:rgba(255,255,255,.8);color:#001931;font-family:inherit"
+          onfocus="this.style.borderColor='#2563EB';this.style.background='#fff'" onblur="this.style.borderColor='rgba(190,213,255,.7)';this.style.background='rgba(255,255,255,.8)'"
           onkeydown="if(event.key==='Enter')document.getElementById('l-pass').focus()">
       </div>
       <div>
-        <label style="font-size:12px;font-weight:600;color:#475569;display:block;margin-bottom:5px">Password</label>
+        <label style="font-size:11.5px;font-weight:700;color:#475569;display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">Password</label>
         <input id="l-pass" type="password" placeholder="Enter password" autocomplete="current-password"
-          style="width:100%;padding:10px 12px;border:1.5px solid #E2E8F0;border-radius:8px;font-size:14px;outline:none;transition:border .15s"
-          onfocus="this.style.borderColor='#2563EB'" onblur="this.style.borderColor='#E2E8F0'"
+          style="width:100%;padding:10px 13px;border:1.5px solid rgba(190,213,255,.7);border-radius:9px;font-size:14px;outline:none;transition:border .15s;background:rgba(255,255,255,.8);color:#001931;font-family:inherit"
+          onfocus="this.style.borderColor='#2563EB';this.style.background='#fff'" onblur="this.style.borderColor='rgba(190,213,255,.7)';this.style.background='rgba(255,255,255,.8)'"
           onkeydown="if(event.key==='Enter')doLogin()">
       </div>
-      <button onclick="doLogin()" style="background:#2563EB;color:#fff;border:none;padding:12px;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px;transition:background .15s" onmouseover="this.style.background='#1D4ED8'" onmouseout="this.style.background='#2563EB'">Sign In</button>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none">
+        <input id="l-remember" type="checkbox" style="width:15px;height:15px;accent-color:#2563EB;cursor:pointer">
+        <span style="font-size:13px;color:#475569;font-weight:500">Remember me</span>
+      </label>
+      <button onclick="doLogin()" style="background:linear-gradient(135deg,#1D4ED8,#2563EB);color:#fff;border:none;padding:12px;border-radius:9px;font-size:15px;font-weight:700;cursor:pointer;margin-top:2px;transition:opacity .15s;box-shadow:0 4px 16px rgba(37,99,235,.35);font-family:inherit" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'">Sign In</button>
     </div>
-    <div style="text-align:center;margin-top:20px;font-size:12px;color:#94A3B8">Secured · For internal use only</div>
+    <div style="text-align:center;margin-top:20px;font-size:11.5px;color:#94A3B8">Secured · For internal use only</div>
   </div>
 </div>
 
