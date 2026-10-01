@@ -207,7 +207,7 @@ input.inp:focus,select.inp:focus,textarea.inp:focus{border-color:var(--primary)}
     <!-- DASHBOARD -->
     <div class="section active" id="sec-dashboard">
       <div class="ph">
-        <div><div class="pt">Dashboard</div><div class="ps">Techwave Solutions Pvt Ltd · FY 2025-26</div></div>
+        <div><div class="pt">Dashboard</div><div class="ps" id="dash-fy-label">Next Quarter · AI Evoked</div></div>
         <div class="pb" id="pb">
           <button class="pbb active" onclick="setPeriod('month',this)">This Month</button>
           <button class="pbb" onclick="setPeriod('quarter',this)">Quarter</button>
@@ -716,33 +716,38 @@ function getPR(){
   if(period==='quarter'){const q=Math.floor(m/3);return{s:new Date(y,q*3,1),e:new Date(y,q*3+3,0)};}
   const fy=m>=3?y:y-1;return{s:new Date(fy,3,1),e:new Date(fy+1,2,31)};
 }
-function inR(d,r){const x=new Date(d);return x>=r.s&&x<=r.e}
+function parseLocalDate(d){const p=String(d).split('-');return p.length===3?new Date(+p[0],+p[1]-1,+p[2]):new Date(d);}
+function inR(d,r){const x=parseLocalDate(d);return x>=r.s&&x<=r.e}
 
+function isOverdue(i){const today=new Date();today.setHours(0,0,0,0);return(i.status==='OVERDUE')||(i.status!=='PAID'&&i.status!=='CANCELLED'&&i.status!=='DRAFT'&&parseLocalDate(i.due)<today);}
 function renderDash(){
   const r=getPR();
   const invs=DB.invoices.filter(i=>inR(i.date,r)&&i.status!=='CANCELLED');
   const exps=DB.expenses.filter(e=>inR(e.date,r));
   const pays=DB.payments.filter(p=>inR(p.date,r));
-  const billed=invs.reduce((s,i)=>s+i.grand,0);
+  const billed=invs.filter(i=>i.status!=='DRAFT').reduce((s,i)=>s+i.grand,0);
   const rcvd=pays.reduce((s,p)=>s+p.amount,0);
-  const ovd=invs.filter(i=>i.status==='OVERDUE');
+  const ovd=invs.filter(i=>isOverdue(i));
   const ovdAmt=ovd.reduce((s,i)=>s+(i.grand-i.paid),0);
-  const unpaid=invs.filter(i=>['SENT','PARTIALLY_PAID','OVERDUE'].includes(i.status));
+  const unpaid=invs.filter(i=>['SENT','PARTIALLY_PAID','OVERDUE'].includes(i.status)||isOverdue(i));
   const unpaidAmt=unpaid.reduce((s,i)=>s+(i.grand-i.paid),0);
-  const expAmt=exps.reduce((s,e)=>s+e.amount,0);
+  const payrollAmt=DB.payslips.filter(ps=>ps.net>0&&inR(ps.paidOn||((ps.month||'').substring(0,7)+'-01'),r)).reduce((s,ps)=>s+ps.net,0);
+  const expAmt=exps.reduce((s,e)=>s+e.amount,0)+payrollAmt;
   const net=rcvd-expAmt;
   document.getElementById('s-billed').textContent=inrK(billed);
-  document.getElementById('s-billed-s').textContent=invs.length+' invoices';
+  document.getElementById('s-billed-s').textContent=invs.filter(i=>i.status!=='DRAFT').length+' invoices';
   document.getElementById('s-rcvd').textContent=inrK(rcvd);
   document.getElementById('s-rcvd-s').textContent=pays.length+' payments';
   document.getElementById('s-ovd').textContent=inrK(ovdAmt);
   document.getElementById('s-ovd-s').textContent=ovd.length+' invoices';
   document.getElementById('s-exp').textContent=inrK(expAmt);
-  document.getElementById('s-net').textContent=inrK(Math.abs(net));
+  const netEl=document.getElementById('s-net');
+  netEl.textContent=inrK(Math.abs(net));
+  netEl.style.color=net<0?'var(--red)':'';
   document.getElementById('s-unpaid').textContent=inrK(unpaidAmt);
   document.getElementById('s-unpaid-s').textContent=unpaid.length+' invoices';
   // Bar chart
-  const months=['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'];
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const now=new Date();const cm=now.getMonth();const cy=now.getFullYear();
   const lbls=[],bd=[],rd=[];
   for(let i=5;i>=0;i--){
@@ -765,7 +770,7 @@ function renderDash(){
   pieC=new Chart(document.getElementById('chart-pie'),{type:'doughnut',data:{labels:Object.keys(cm_),datasets:[{data:Object.values(cm_),backgroundColor:cl,borderWidth:2,borderColor:dk?'#161B22':'#fff'}]},options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{position:'right',labels:{color:tc,boxWidth:10,padding:10,font:{size:11}}}}}});
   // Lists
   const nowD=new Date();const in7=new Date(nowD.getTime()+7*86400000);
-  const ovdL=DB.invoices.filter(i=>i.status==='OVERDUE').sort((a,b)=>new Date(a.due)-new Date(b.due)).slice(0,5);
+  const ovdL=DB.invoices.filter(i=>isOverdue(i)).sort((a,b)=>parseLocalDate(a.due)-parseLocalDate(b.due)).slice(0,5);
   document.getElementById('list-ovd').innerHTML=ovdL.length?ovdL.map(i=>{const cl_=DB.clients.find(c=>c.id===i.clientId);return`<div class="li" onclick="openDet('${i.id}')" style="cursor:pointer"><div><div class="ln">${i.num}</div><div class="lsub">${cl_.name}</div></div><div><div class="lv num" style="color:var(--red)">${inr(i.grand-i.paid)}</div><div class="lsub2">${fmt(i.due)}</div></div></div>`;}).join(''):'<p style="font-size:13px;color:var(--text2)">No overdue invoices 🎉</p>';
   const soonL=DB.invoices.filter(i=>['SENT','PARTIALLY_PAID'].includes(i.status)&&new Date(i.due)>=nowD&&new Date(i.due)<=in7).slice(0,5);
   document.getElementById('list-soon').innerHTML=soonL.length?soonL.map(i=>{const cl_=DB.clients.find(c=>c.id===i.clientId);return`<div class="li" onclick="openDet('${i.id}')" style="cursor:pointer"><div><div class="ln">${i.num}</div><div class="lsub">${cl_.name}</div></div><div><div class="lv num">${inr(i.grand-i.paid)}</div><div class="lsub2">Due ${fmt(i.due)}</div></div></div>`;}).join(''):'<p style="font-size:13px;color:var(--text2)">None due in 7 days</p>';
@@ -818,6 +823,9 @@ function editClient(id){
   openM('m-client');
 }
 function deleteClient(id){
+  const invIds=DB.invoices.filter(i=>i.clientId===id).map(i=>i.id);
+  DB.payments=DB.payments.filter(p=>!invIds.includes(p.invoiceId));
+  DB.invoices=DB.invoices.filter(i=>i.clientId!==id);
   DB.clients=DB.clients.filter(c=>c.id!==id);persist();
   renderClients();
 }
@@ -956,7 +964,7 @@ function saveInv(status){
     lines.push({desc:row.querySelector('.li-d')?.value||'Service',hsn:'998313',qty,rate:rate*100,tax:t,total:amt+taxAmt});
     sub+=amt;tax+=taxAmt;
   });
-  const g=sub+tax;const n=DB.invCtr++;
+  const g=sub+tax;
   const editId=document.getElementById('m-invoice').dataset.editId;
   if(editId){
     const inv=DB.invoices.find(x=>x.id===editId);
@@ -965,7 +973,10 @@ function saveInv(status){
     document.querySelector('#m-invoice .mt').textContent='New Invoice';
     document.querySelector('#m-invoice .mf').innerHTML='<button class="btn btn-o" onclick="closeM(\'m-invoice\')">Cancel</button><button class="btn btn-o" onclick="saveInv(\'DRAFT\')">Save Draft</button><button class="btn btn-p" onclick="saveInv(\'SENT\')">Create & Send</button>';
   } else {
-    const ni={id:'i'+Date.now(),num:`TW/2025-26/${String(n).padStart(4,'0')}`,clientId:cid,date:document.getElementById('i-dt').value,due:document.getElementById('i-dd').value,status,subtotal:sub,cgst:ig?0:tax/2,sgst:ig?0:tax/2,igst:ig?tax:0,totalTax:tax,grand:g,paid:0,lines};
+    const n=DB.invCtr++;
+    const invDate=document.getElementById('i-dt').value||new Date().toISOString().slice(0,10);
+    const fy=(()=>{const d=parseLocalDate(invDate);const y=d.getFullYear();const m=d.getMonth();return m>=3?`${y}-${String(y+1).slice(-2)}`:`${y-1}-${String(y).slice(-2)}`;})();
+    const ni={id:'i'+Date.now(),num:`NQ/${fy}/${String(n).padStart(4,'0')}`,clientId:cid,date:invDate,due:document.getElementById('i-dd').value,status,subtotal:sub,cgst:ig?0:tax/2,sgst:ig?0:tax/2,igst:ig?tax:0,totalTax:tax,grand:g,paid:0,lines};
     DB.invoices.unshift(ni);
     sbUpsert('invoices',{id:ni.id,client_id:ni.clientId,date:ni.date,due_date:ni.due,tax_type:ig?'igst':'cgst',status:ni.status,subtotal:ni.subtotal,tax:ni.totalTax,grand:ni.grand});
   }
@@ -1017,7 +1028,7 @@ function renderPays(){
       <td style="text-align:right;font-weight:700;color:var(--green)" class="num">${inr(p.amount)}</td>
       <td style="white-space:nowrap;display:flex;gap:4px;align-items:center">
         <button onclick="editPayment('${p.id}')" style="font-size:12px;padding:3px 9px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--text);cursor:pointer">Edit</button>
-        <button onclick="delConfirm(this,()=>{DB.payments=DB.payments.filter(x=>x.id!=='${p.id}');persist();renderPays();renderDash();})" style="font-size:12px;padding:3px 9px;border:1px solid var(--red);border-radius:5px;background:var(--surface);color:var(--red);cursor:pointer">Delete</button>
+        <button onclick="delConfirm(this,()=>{const _invId='${p.invoiceId}';DB.payments=DB.payments.filter(x=>x.id!=='${p.id}');recalcInvPaid(_invId);persist();renderPays();renderDash();})" style="font-size:12px;padding:3px 9px;border:1px solid var(--red);border-radius:5px;background:var(--surface);color:var(--red);cursor:pointer">Delete</button>
       </td>
     </tr>`;
   }).join('');
@@ -1031,6 +1042,13 @@ function editPayment(id){
   document.getElementById('ep-ref').value=p.ref||'';
   openM('m-edit-pay');
 }
+function recalcInvPaid(invId){
+  const inv=DB.invoices.find(i=>i.id===invId);if(!inv)return;
+  inv.paid=DB.payments.filter(p=>p.invoiceId===invId).reduce((s,p)=>s+p.amount,0);
+  if(inv.paid>=inv.grand)inv.status='PAID';
+  else if(inv.paid>0)inv.status='PARTIALLY_PAID';
+  else if(['PAID','PARTIALLY_PAID'].includes(inv.status))inv.status='SENT';
+}
 function savePayment(){
   const id=document.getElementById('ep-id').value;
   const p=DB.payments.find(x=>x.id===id);if(!p)return;
@@ -1038,8 +1056,9 @@ function savePayment(){
   p.amount=Math.round(parseFloat(document.getElementById('ep-amount').value||0)*100);
   p.mode=document.getElementById('ep-mode').value;
   p.ref=document.getElementById('ep-ref').value;
+  recalcInvPaid(p.invoiceId);
   persist();closeM('m-edit-pay');
-  renderPays();
+  renderPays();renderDash();
 }
 
 // ─── EXPENSES ───────────────────────────────────────────────────────────
@@ -1282,11 +1301,14 @@ function doLogout(){
 })();
 
 // ─── PROJECTIONS ─────────────────────────────────────────────────────────
-DB.deals=[
-  {id:1,client:'Bonsoir',tier:'Core',mrr:25000,start:'2026-08-01',end:'2026-10-31',status:'active',notes:'3-month pilot → retainer'},
-  {id:2,client:'Sample Brand',tier:'Lite',mrr:12000,start:'2026-09-01',end:'',status:'upcoming',notes:'Starting Oct'},
-];
-DB.dealCtr=3;
+// Only seed default deals if none saved
+if(!DB.deals||DB.deals.length===0){
+  DB.deals=[
+    {id:1,client:'Bonsoir',tier:'Core',mrr:25000,start:'2026-08-01',end:'2026-10-31',status:'active',notes:'3-month pilot → retainer'},
+    {id:2,client:'Sample Brand',tier:'Lite',mrr:12000,start:'2026-09-01',end:'',status:'upcoming',notes:'Starting Oct'},
+  ];
+  DB.dealCtr=3;
+}
 
 let projChart=null;
 
@@ -1444,9 +1466,16 @@ function printLedger(){
   const outstanding=totalBilled-totalPaid;
   const periodLabel=period==='all'?'All Time':period==='fy'?'Current FY':period==='month'?'This Month':period==='quarter'?'This Quarter':'This Year';
 
-  const win=window.open('','_blank');
+  // Use iframe to avoid popup blockers
+  let pf=document.getElementById('_print_frame');
+  if(pf)pf.remove();
+  pf=document.createElement('iframe');pf.id='_print_frame';
+  pf.style.cssText='position:fixed;top:0;left:0;width:0;height:0;border:0;visibility:hidden';
+  document.body.appendChild(pf);
+  const win=pf.contentWindow;
+  win.document.open();
   win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
-  <title>Ledger — ${client.name}</title>
+  <title>Statement — ${client.name}</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap">
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
@@ -1545,9 +1574,9 @@ function printLedger(){
       <div class="stamp">${DB.settings.companyName||'Next Quarter · AI Evoked'}</div>
     </div>
   </div>
-  <script>window.onload=()=>{window.print();}<\/script>
   </body></html>`);
   win.document.close();
+  setTimeout(()=>{try{win.focus();win.print();}catch(e){}},600);
 }
 
 function renderProjections(){
@@ -1582,15 +1611,24 @@ function renderProjections(){
 
   if(projChart)projChart.destroy();
   const ctx=document.getElementById('proj-chart').getContext('2d');
+  const dk2=document.documentElement.getAttribute('data-theme')==='dark'||(!document.documentElement.getAttribute('data-theme')&&window.matchMedia('(prefers-color-scheme:dark)').matches);
+  const gc2=dk2?'rgba(255,255,255,.07)':'rgba(0,0,0,.05)';
+  const tc2=dk2?'#8B949E':'#64748B';
+  // Cumulative ARR line
+  let cumArr=0;const cumData=mrrData.map(v=>{cumArr+=v*12;return cumArr;});
   projChart=new Chart(ctx,{
-    type:'bar',
+    type:'line',
     data:{labels,datasets:[
-      {label:'MRR',data:mrrData,backgroundColor:'rgba(37,99,235,.75)',borderRadius:4,yAxisID:'y'},
-      {label:'ARR',data:arrData,type:'line',borderColor:'#16A34A',backgroundColor:'transparent',borderWidth:2,pointRadius:3,tension:.3,yAxisID:'y2'},
+      {label:'MRR',data:mrrData,borderColor:'#2563EB',backgroundColor:'rgba(37,99,235,.12)',fill:true,borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#2563EB',tension:.4},
+      {label:'ARR',data:arrData,borderColor:'#16A34A',backgroundColor:'rgba(22,163,74,.07)',fill:true,borderWidth:2,pointRadius:3,pointBackgroundColor:'#16A34A',tension:.4,yAxisID:'y2'},
     ]},
-    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index'},plugins:{legend:{position:'top',labels:{boxWidth:12,font:{size:11}}}},scales:{
-      y:{position:'left',ticks:{callback:v=>inrShort(v),font:{size:10}},grid:{color:'rgba(0,0,0,.05)'}},
-      y2:{position:'right',ticks:{callback:v=>inrShort(v),font:{size:10}},grid:{display:false}},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{
+      legend:{position:'top',labels:{color:tc2,boxWidth:10,font:{size:11},usePointStyle:true}},
+      tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${inrShort(ctx.raw)}`}},
+    },scales:{
+      x:{ticks:{color:tc2,font:{size:11}},grid:{color:gc2}},
+      y:{position:'left',ticks:{callback:v=>inrShort(v),color:tc2,font:{size:10}},grid:{color:gc2},title:{display:true,text:'MRR',color:tc2,font:{size:10}}},
+      y2:{position:'right',ticks:{callback:v=>inrShort(v),color:tc2,font:{size:10}},grid:{display:false},title:{display:true,text:'ARR',color:tc2,font:{size:10}}},
     }}
   });
 
@@ -1698,7 +1736,7 @@ function genMOU(){
 
   // Shared page header & footer (matches the PDF exactly)
   const pgHead=`<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">
-    <div style="max-height:44px;display:flex;align-items:center">${DB.settings.logo?`<img src="${DB.settings.logo}" style="max-height:40px;max-width:120px;object-fit:contain" alt="Logo">`:`<div style="font-size:26px;font-weight:900;letter-spacing:2px;font-family:'Arial Black',Arial,sans-serif;color:#111">N Q</div>`}</div>
+    <div style="max-height:64px;display:flex;align-items:center">${DB.settings.logoNQ?`<img src="${DB.settings.logoNQ}" style="max-height:64px;max-width:160px;object-fit:contain" alt="NQ Logo">`:`<div style="font-size:26px;font-weight:900;letter-spacing:2px;font-family:'Arial Black',Arial,sans-serif;color:#111">N Q</div>`}</div>
     <div style="text-align:center">
       <div style="font-size:30px;font-weight:900;line-height:1.15;font-family:'Arial Black',Arial,sans-serif;color:#111">MEMORANDUM OF<br>UNDERSTANDING</div>
       <div style="font-size:14px;color:#333;margin-top:6px;font-family:Arial,sans-serif">For ${spBrand} ${days}-day Growth Pilot</div>
@@ -1868,15 +1906,14 @@ function removeLogo(key){
   persist();
 }
 function getLogoBlock(forDark){
-  // Returns NQ logo (left side usage — payslip header, invoice header)
   if(!DB.settings.logoNQ)return forDark?
     `<div style="font-size:22px;font-weight:900;letter-spacing:2px;color:#fff">NQ</div><div style="font-size:11px;opacity:.6">Next Quarter · AI Evoked</div>`:
     `<div style="font-size:18px;font-weight:900;letter-spacing:2px;color:#001931">NQ</div>`;
-  return`<img src="${DB.settings.logoNQ}" style="max-height:${forDark?'44':'36'}px;max-width:140px;object-fit:contain" alt="NQ Logo">`;
+  return`<img src="${DB.settings.logoNQ}" style="max-height:64px;max-width:180px;object-fit:contain" alt="NQ Logo">`;
 }
 function getAILogoBlock(){
   if(!DB.settings.logoAI)return`<div style="font-size:18px;font-weight:900;color:#111;font-family:'Arial Black',Arial,sans-serif">AI<br>Ev<span style="display:inline-block;position:relative">o<span style="position:absolute;left:0;right:0;top:50%;border-top:2.5px solid #111;transform:translateY(-50%)"></span></span>ked</div>`;
-  return`<img src="${DB.settings.logoAI}" style="max-height:40px;max-width:120px;object-fit:contain" alt="AI Evoked Logo">`;
+  return`<img src="${DB.settings.logoAI}" style="max-height:64px;max-width:160px;object-fit:contain" alt="AI Evoked Logo">`;
 }
 
 function openPDF(id){
@@ -1916,7 +1953,7 @@ function openPDF(id){
       </div>
       <div style="display:flex;align-items:center;gap:10px">
         ${getLogoBlock(false)}
-        ${DB.settings.logoAI?`<img src="${DB.settings.logoAI}" style="max-height:36px;max-width:100px;object-fit:contain" alt="AI Evoked">`:`<div style="font-size:11px;font-weight:700;color:#6B21A8;text-align:right;line-height:1.3">AI<br>Evoked</div>`}
+        ${DB.settings.logoAI?`<img src="${DB.settings.logoAI}" style="max-height:64px;max-width:140px;object-fit:contain" alt="AI Evoked">`:`<div style="font-size:11px;font-weight:700;color:#6B21A8;text-align:right;line-height:1.3">AI<br>Evoked</div>`}
       </div>
     </div>
 
