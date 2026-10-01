@@ -82,6 +82,12 @@ nav{flex:1;padding:10px 8px;overflow-y:auto;display:flex;flex-direction:column;g
 .tw{overflow-x:auto}
 table{width:100%;border-collapse:collapse}
 th{text-align:left;font-size:11.5px;font-weight:600;color:var(--text2);padding:10px 14px;border-bottom:1px solid var(--border);white-space:nowrap;letter-spacing:.03em;text-transform:uppercase}
+th.sortable{cursor:pointer;user-select:none}
+th.sortable:hover{color:var(--primary)}
+th.sortable::after{content:' ⇅';opacity:.35;font-size:10px}
+th.sort-asc::after{content:' ↑';opacity:1;color:var(--primary)}
+th.sort-desc::after{content:' ↓';opacity:1;color:var(--primary)}
+th.sort-asc,th.sort-desc{color:var(--primary)}
 td{padding:11px 14px;border-bottom:1px solid var(--border);font-size:13px}
 tr:last-child td{border-bottom:none}
 tbody tr{transition:background .1s;cursor:pointer}
@@ -271,7 +277,7 @@ input.inp:focus,select.inp:focus,textarea.inp:focus{border-color:var(--primary)}
         <button class="qf-btn" id="qf-paid" onclick="setInvQuickFilter('PAID')">Paid</button>
         <button class="qf-btn" id="qf-due" onclick="setInvQuickFilter('OVERDUE,PARTIALLY_PAID')">Due / Overdue</button>
       </div>
-      <div class="card tw"><table><thead><tr><th>Invoice #</th><th>Client</th><th>Date</th><th>Due Date</th><th style="text-align:right">Amount</th><th style="text-align:right">Due</th><th>Status</th><th></th></tr></thead><tbody id="inv-body"></tbody></table></div>
+      <div class="card tw"><table><thead id="inv-thead"><tr><th class="sortable" onclick="thSort('inv','num')">Invoice #</th><th class="sortable" onclick="thSort('inv','client')">Client</th><th class="sortable" onclick="thSort('inv','date')">Date</th><th class="sortable" onclick="thSort('inv','due')">Due Date</th><th class="sortable" style="text-align:right" onclick="thSort('inv','amount')">Amount</th><th class="sortable" style="text-align:right" onclick="thSort('inv','due_amt')">Due</th><th class="sortable" onclick="thSort('inv','status')">Status</th><th></th></tr></thead><tbody id="inv-body"></tbody></table></div>
     </div>
 
     <!-- PAYMENTS -->
@@ -284,7 +290,7 @@ input.inp:focus,select.inp:focus,textarea.inp:focus{border-color:var(--primary)}
         <input type="date" class="fi" id="pay-df" onchange="renderPays()" title="From date" style="cursor:pointer">
         <input type="date" class="fi" id="pay-dt" onchange="renderPays()" title="To date" style="cursor:pointer">
       </div>
-      <div class="card tw"><table><thead><tr><th>Date</th><th>Invoice</th><th>Client</th><th>Mode</th><th>Reference</th><th style="text-align:right">Amount</th><th></th></tr></thead><tbody id="pay-body"></tbody></table></div>
+      <div class="card tw"><table><thead id="pay-thead"><tr><th class="sortable" onclick="thSort('pay','date')">Date</th><th class="sortable" onclick="thSort('pay','inv')">Invoice</th><th class="sortable" onclick="thSort('pay','client')">Client</th><th class="sortable" onclick="thSort('pay','mode')">Mode</th><th>Reference</th><th class="sortable" style="text-align:right" onclick="thSort('pay','amount')">Amount</th><th></th></tr></thead><tbody id="pay-body"></tbody></table></div>
     </div>
 
     <!-- EXPENSES -->
@@ -301,7 +307,7 @@ input.inp:focus,select.inp:focus,textarea.inp:focus{border-color:var(--primary)}
         <input type="date" class="fi" id="exp-df" onchange="renderExp()" title="From date" style="cursor:pointer">
         <input type="date" class="fi" id="exp-dt" onchange="renderExp()" title="To date" style="cursor:pointer">
       </div>
-      <div class="card tw"><table><thead><tr><th>Date</th><th>Category</th><th>Vendor</th><th>Mode</th><th style="text-align:right">Amount</th><th style="text-align:right">GST Paid</th><th>Notes</th><th></th></tr></thead><tbody id="exp-body"></tbody></table></div>
+      <div class="card tw"><table><thead id="exp-thead"><tr><th class="sortable" onclick="thSort('exp','date')">Date</th><th class="sortable" onclick="thSort('exp','cat')">Category</th><th class="sortable" onclick="thSort('exp','vendor')">Vendor</th><th>Mode</th><th class="sortable" style="text-align:right" onclick="thSort('exp','amount')">Amount</th><th style="text-align:right">GST Paid</th><th>Notes</th><th></th></tr></thead><tbody id="exp-body"></tbody></table></div>
     </div>
 
     <!-- PAYROLL -->
@@ -317,7 +323,7 @@ input.inp:focus,select.inp:focus,textarea.inp:focus{border-color:var(--primary)}
         <div class="sw_"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg><input class="si_" placeholder="Search employee / designation…" oninput="prQ=this.value;renderPayroll()"></div>
         <select class="fi" id="pr-sort" onchange="renderPayroll()"><option value="name-asc">A → Z</option><option value="name-desc">Z → A</option><option value="gross-desc">Highest Gross</option><option value="gross-asc">Lowest Gross</option><option value="net-desc">Highest Net</option></select>
       </div>
-      <div class="card tw"><table><thead><tr><th>Name</th><th>Designation</th><th style="text-align:right">Basic/mo</th><th style="text-align:right">Gross/mo</th><th style="text-align:right">Net/mo</th><th>Last Payslip</th><th></th><th>Actions</th></tr></thead><tbody id="pr-body"></tbody></table></div>
+      <div class="card tw"><table><thead id="pr-thead"><tr><th class="sortable" onclick="thSort('pr','name')">Name</th><th class="sortable" onclick="thSort('pr','desig')">Designation</th><th class="sortable" style="text-align:right" onclick="thSort('pr','basic')">Basic/mo</th><th class="sortable" style="text-align:right" onclick="thSort('pr','gross')">Gross/mo</th><th class="sortable" style="text-align:right" onclick="thSort('pr','net')">Net/mo</th><th>Last Payslip</th><th></th><th>Actions</th></tr></thead><tbody id="pr-body"></tbody></table></div>
     </div>
 
     <!-- REPORTS -->
@@ -962,6 +968,61 @@ function renderDash(){
 }
 
 // ─── CLIENTS ────────────────────────────────────────────────────────────
+// ─── COLUMN HEADER SORT ─────────────────────────────────────────────────
+const _thState={};
+const _thSortMap={
+  inv:{num:'num-asc',client:'client-asc',date:'date-desc',due:'due-asc',amount:'amount-desc',due_amt:'amount-desc',status:'status-asc'},
+  pay:{date:'date-desc',inv:'inv-asc',client:'client-asc',mode:'mode-asc',amount:'amount-desc'},
+  exp:{date:'date-desc',cat:'cat-asc',vendor:'vendor-asc',amount:'amount-desc'},
+  pr:{name:'name-asc',desig:'name-asc',basic:'gross-desc',gross:'gross-desc',net:'net-desc'}
+};
+function thSort(table,col){
+  const key=table+'_'+col;
+  const sortEl=document.getElementById(table+'-sort');
+  // Determine direction: toggle if same col, else use default
+  const prev=_thState[table];
+  let sortVal=_thSortMap[table][col]||col+'-asc';
+  if(prev&&prev.col===col){
+    // toggle direction
+    sortVal=sortVal.includes('-asc')?sortVal.replace('-asc','-desc'):sortVal.replace('-desc','-asc');
+  }
+  _thState[table]={col,val:sortVal};
+  if(sortEl)sortEl.value=sortVal;
+  // Highlight header
+  const thead=document.getElementById(table+'-thead');
+  if(thead){
+    thead.querySelectorAll('th').forEach(th=>{th.classList.remove('sort-asc','sort-desc');});
+    const allTh=thead.querySelectorAll('th.sortable');
+    allTh.forEach(th=>{
+      if(th.getAttribute('onclick')&&th.getAttribute('onclick').includes("'"+col+"'")){
+        th.classList.add(sortVal.endsWith('-asc')?'sort-asc':'sort-desc');
+      }
+    });
+  }
+  if(table==='inv')renderInvTable();
+  else if(table==='pay')renderPays();
+  else if(table==='exp')renderExp();
+  else if(table==='pr')renderPayroll();
+}
+
+
+function syncThHeaders(table,sortVal){
+  const thead=document.getElementById(table+'-thead');
+  if(!thead)return;
+  thead.querySelectorAll('th').forEach(th=>th.classList.remove('sort-asc','sort-desc'));
+  if(!sortVal)return;
+  const dir=sortVal.endsWith('-asc')?'sort-asc':'sort-desc';
+  const col=sortVal.replace(/-asc|-desc/,'');
+  const st=_thState[table];
+  const activeCol=st?st.col:null;
+  if(activeCol){
+    thead.querySelectorAll('th.sortable').forEach(th=>{
+      if(th.getAttribute('onclick')&&th.getAttribute('onclick').includes("'"+activeCol+"'")){
+        th.classList.add(dir);
+      }
+    });
+  }
+}
 let clQ='';
 function renderClients(){
   const q=clQ.toLowerCase();
@@ -1058,6 +1119,7 @@ function renderInvTable(){
   const sf=document.getElementById('inv-sf')?.value||'';
   const cf=document.getElementById('inv-cf')?.value||'';
   const sort=document.getElementById('inv-sort')?.value||'date-desc';
+  syncThHeaders('inv',sort);
   const df=document.getElementById('inv-df')?.value||'';
   const dt=document.getElementById('inv-dt')?.value||'';
   const q=invQ.toLowerCase();
@@ -1080,6 +1142,13 @@ function renderInvTable(){
   else if(sort==='amount-desc')list=[...list].sort((a,b)=>b.grand-a.grand);
   else if(sort==='amount-asc')list=[...list].sort((a,b)=>a.grand-b.grand);
   else if(sort==='num-asc')list=[...list].sort((a,b)=>a.num.localeCompare(b.num));
+  else if(sort==='num-desc')list=[...list].sort((a,b)=>b.num.localeCompare(a.num));
+  else if(sort==='client-asc')list=[...list].sort((a,b)=>(DB.clients.find(c=>c.id===a.clientId)?.name||'').localeCompare(DB.clients.find(c=>c.id===b.clientId)?.name||''));
+  else if(sort==='client-desc')list=[...list].sort((a,b)=>(DB.clients.find(c=>c.id===b.clientId)?.name||'').localeCompare(DB.clients.find(c=>c.id===a.clientId)?.name||''));
+  else if(sort==='due-asc')list=[...list].sort((a,b)=>a.due.localeCompare(b.due));
+  else if(sort==='due-desc')list=[...list].sort((a,b)=>b.due.localeCompare(a.due));
+  else if(sort==='status-asc')list=[...list].sort((a,b)=>a.status.localeCompare(b.status));
+  else if(sort==='status-desc')list=[...list].sort((a,b)=>b.status.localeCompare(a.status));
   const tot=list.reduce((s,i)=>s+i.grand,0);
   const due=list.reduce((s,i)=>s+(i.grand-i.paid),0);
   document.getElementById('inv-sub').textContent=list.length+' invoices · '+inrK(tot)+' billed · '+inrK(due)+' due';
@@ -1254,6 +1323,7 @@ function renderPays(){
   const q=payQ.toLowerCase();
   const mode=document.getElementById('pay-mode')?.value||'';
   const sort=document.getElementById('pay-sort')?.value||'date-desc';
+  syncThHeaders('pay',sort);
   const df=document.getElementById('pay-df')?.value||'';
   const dt=document.getElementById('pay-dt')?.value||'';
   let list=DB.payments.filter(p=>{
@@ -1271,6 +1341,12 @@ function renderPays(){
   else if(sort==='date-asc')list=[...list].sort((a,b)=>a.date.localeCompare(b.date));
   else if(sort==='amount-desc')list=[...list].sort((a,b)=>b.amount-a.amount);
   else if(sort==='amount-asc')list=[...list].sort((a,b)=>a.amount-b.amount);
+  else if(sort==='inv-asc')list=[...list].sort((a,b)=>(DB.invoices.find(x=>x.id===a.invoiceId)?.num||'').localeCompare(DB.invoices.find(x=>x.id===b.invoiceId)?.num||''));
+  else if(sort==='inv-desc')list=[...list].sort((a,b)=>(DB.invoices.find(x=>x.id===b.invoiceId)?.num||'').localeCompare(DB.invoices.find(x=>x.id===a.invoiceId)?.num||''));
+  else if(sort==='client-asc')list=[...list].sort((a,b)=>{const ia=DB.invoices.find(x=>x.id===a.invoiceId);const ib=DB.invoices.find(x=>x.id===b.invoiceId);return(DB.clients.find(c=>c.id===ia?.clientId)?.name||'').localeCompare(DB.clients.find(c=>c.id===ib?.clientId)?.name||'');});
+  else if(sort==='client-desc')list=[...list].sort((a,b)=>{const ia=DB.invoices.find(x=>x.id===a.invoiceId);const ib=DB.invoices.find(x=>x.id===b.invoiceId);return(DB.clients.find(c=>c.id===ib?.clientId)?.name||'').localeCompare(DB.clients.find(c=>c.id===ia?.clientId)?.name||'');});
+  else if(sort==='mode-asc')list=[...list].sort((a,b)=>a.mode.localeCompare(b.mode));
+  else if(sort==='mode-desc')list=[...list].sort((a,b)=>b.mode.localeCompare(a.mode));
   const tot=list.reduce((s,p)=>s+p.amount,0);
   document.getElementById('pay-sub').textContent=list.length+' payments · '+inrK(tot)+' total';
   document.getElementById('pay-body').innerHTML=list.map(p=>{
@@ -1326,6 +1402,7 @@ function renderExp(){
   const cat=document.getElementById('exp-cf')?.value||'';
   const period=document.getElementById('exp-pf')?.value||'';
   const sort=document.getElementById('exp-sort')?.value||'date-desc';
+  syncThHeaders('exp',sort);
   const df=document.getElementById('exp-df')?.value||'';
   const dt=document.getElementById('exp-dt')?.value||'';
   const cats=[...new Set(DB.expenses.map(e=>e.cat))].sort();
@@ -1344,6 +1421,10 @@ function renderExp(){
   else if(sort==='date-asc')list=[...list].sort((a,b)=>a.date.localeCompare(b.date));
   else if(sort==='amount-desc')list=[...list].sort((a,b)=>b.amount-a.amount);
   else if(sort==='amount-asc')list=[...list].sort((a,b)=>a.amount-b.amount);
+  else if(sort==='cat-asc')list=[...list].sort((a,b)=>(a.cat||'').localeCompare(b.cat||''));
+  else if(sort==='cat-desc')list=[...list].sort((a,b)=>(b.cat||'').localeCompare(a.cat||''));
+  else if(sort==='vendor-asc')list=[...list].sort((a,b)=>(a.vendor||'').localeCompare(b.vendor||''));
+  else if(sort==='vendor-desc')list=[...list].sort((a,b)=>(b.vendor||'').localeCompare(a.vendor||''));
   const tot=list.reduce((s,e)=>s+e.amount,0);
   document.getElementById('exp-sub').textContent=list.length+' entries · '+inrK(tot)+' total';
   document.getElementById('exp-body').innerHTML=list.map(e=>`<tr>
@@ -1402,6 +1483,7 @@ let prQ='';
 function renderPayroll(){
   const q=prQ.toLowerCase();
   const sort=document.getElementById('pr-sort')?.value||'name-asc';
+  syncThHeaders('pr',sort);
   let list=DB.employees.filter(e=>!q||e.name.toLowerCase().includes(q)||e.desig.toLowerCase().includes(q));
   list=list.map(e=>({...e,_gross:e.basic+e.hra+e.allow,_net:calcNet(e).net}));
   if(sort==='name-asc')list.sort((a,b)=>a.name.localeCompare(b.name));
@@ -1409,6 +1491,10 @@ function renderPayroll(){
   else if(sort==='gross-desc')list.sort((a,b)=>b._gross-a._gross);
   else if(sort==='gross-asc')list.sort((a,b)=>a._gross-b._gross);
   else if(sort==='net-desc')list.sort((a,b)=>b._net-a._net);
+  else if(sort==='net-asc')list.sort((a,b)=>a._net-b._net);
+  else if(sort==='desig-asc')list.sort((a,b)=>(a.desig||'').localeCompare(b.desig||''));
+  else if(sort==='desig-desc')list.sort((a,b)=>(b.desig||'').localeCompare(a.desig||''));
+  else if(sort==='basic-asc')list.sort((a,b)=>a._gross-b._gross);
   const totGross=list.reduce((s,e)=>s+e._gross,0);
   document.getElementById('pr-sub').textContent=list.length+' of '+DB.employees.length+' employees · '+inrK(totGross)+'/mo gross';
   const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
