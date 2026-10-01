@@ -2169,7 +2169,7 @@ function redownloadMOU(id){
   let rc=document.getElementById('_mou_render');
   if(rc)rc.remove();
   rc=document.createElement('div');rc.id='_mou_render';
-  rc.style.cssText='position:absolute;left:-9999px;top:0;width:794px;background:#fff;font-family:Arial,sans-serif;font-size:13px;color:#000;padding:56px 60px;box-sizing:border-box;opacity:0;pointer-events:none;z-index:-1';
+  rc.style.cssText='position:absolute;left:-9999px;top:0;width:794px;background:#fff;font-family:Arial,sans-serif;font-size:13px;color:#000;padding:56px 60px;box-sizing:border-box;pointer-events:none';
   rc.innerHTML=m.html;
   rc.querySelectorAll('*').forEach(el=>{el.style.backdropFilter='';el.style.webkitBackdropFilter='';});
   document.body.appendChild(rc);
@@ -2202,7 +2202,7 @@ function downloadMOU(){
   let rc=document.getElementById('_mou_render');
   if(rc)rc.remove();
   rc=document.createElement('div');rc.id='_mou_render';
-  rc.style.cssText='position:absolute;left:-9999px;top:0;width:794px;background:#fff;font-family:Arial,sans-serif;font-size:13px;color:#000;padding:56px 60px;box-sizing:border-box;opacity:0;pointer-events:none;z-index:-1;line-height:1.6';
+  rc.style.cssText='position:absolute;left:-9999px;top:0;width:794px;background:#fff;font-family:Arial,sans-serif;font-size:13px;color:#000;padding:56px 60px;box-sizing:border-box;pointer-events:none;line-height:1.6';
   rc.innerHTML=bodyContent;
   rc.querySelectorAll('*').forEach(el=>{el.style.backdropFilter='';el.style.webkitBackdropFilter='';});
   document.body.appendChild(rc);
@@ -2337,7 +2337,7 @@ function htmlStringToPDF(htmlContent,filename,width){
   let rc=document.getElementById('_pdf_render');
   if(rc)rc.remove();
   rc=document.createElement('div');rc.id='_pdf_render';
-  rc.style.cssText='position:absolute;left:-9999px;top:0;width:'+width+'px;background:#fff;font-family:Arial,sans-serif;font-size:13px;color:#000;padding:0;box-sizing:border-box;opacity:0;pointer-events:none;';
+  rc.style.cssText='position:absolute;left:-9999px;top:0;width:'+width+'px;background:#fff;font-family:Arial,sans-serif;font-size:13px;color:#000;padding:0;box-sizing:border-box;pointer-events:none';
   rc.innerHTML=htmlContent;
   document.body.appendChild(rc);
   loadPDFLibs(function(){
@@ -2628,7 +2628,7 @@ function downloadPDF(){
   let rc=document.getElementById('_inv_render');
   if(rc)rc.remove();
   rc=document.createElement('div');rc.id='_inv_render';
-  rc.style.cssText='position:absolute;left:-9999px;top:0;width:794px;background:#fff;opacity:0;pointer-events:none;z-index:-1';
+  rc.style.cssText='position:absolute;left:-9999px;top:0;width:794px;background:#fff;pointer-events:none';
   rc.innerHTML=body.innerHTML;
   document.body.appendChild(rc);
   loadPDFLibs(function(){
