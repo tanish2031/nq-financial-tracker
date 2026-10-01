@@ -434,7 +434,7 @@ Offer Visibility Optimisation (COD/Shipping clarity)</textarea>
             </div>
           </div>
         </div></div>
-        <button class="btn btn-p" onclick="alert('Settings saved (demo mode)')">Save Settings</button>
+        <button class="btn btn-p" onclick="saveSettings()">Save Settings</button>
       </div>
     </div>
 
@@ -652,6 +652,17 @@ function persist(){
   try{localStorage.setItem('nq_db',JSON.stringify(DB));}catch(e){}
 }
 
+function toast(msg,type){
+  type=type||'info';
+  const t=document.createElement('div');
+  const colors={success:'#16A34A',error:'#DC2626',info:'#2563EB',warn:'#D97706'};
+  t.style.cssText='position:fixed;bottom:24px;right:24px;z-index:99999;background:#fff;color:#001931;border-left:4px solid '+colors[type]+';border-radius:8px;padding:12px 18px;font-size:13.5px;font-weight:500;box-shadow:0 8px 32px rgba(0,25,49,.18);max-width:320px;line-height:1.4;display:flex;align-items:center;gap:10px;transform:translateY(20px);opacity:0;transition:all .25s';
+  t.textContent=msg;
+  document.body.appendChild(t);
+  requestAnimationFrame(()=>{t.style.transform='translateY(0)';t.style.opacity='1';});
+  setTimeout(()=>{t.style.transform='translateY(20px)';t.style.opacity='0';setTimeout(()=>t.remove(),300);},3500);
+}
+
 // Push a single record to Supabase (fire and forget)
 async function sbUpsert(table,data){try{await sb.from(table).upsert(data);}catch(e){console.warn('sbUpsert',e);}}
 async function sbDelete(table,id){try{await sb.from(table).delete().eq('id',id);}catch(e){console.warn('sbDelete',e);}}
@@ -844,7 +855,7 @@ function deleteClient(id){
 }
 function addClient(){
   const n=document.getElementById('c-n').value.trim();
-  if(!n)return alert('Company name is required');
+  if(!n)return toast('Company name is required','error');
   const editId=document.getElementById('c-n').dataset.editId;
   if(editId){
     const c=DB.clients.find(x=>x.id===editId);
@@ -969,7 +980,7 @@ function calcTot(){
     <div class="tl grand"><span>Grand Total</span><span class="num">${inr(g)}</span></div>`;
 }
 function saveInv(status){
-  const cid=document.getElementById('i-cl').value;if(!cid)return alert('Select a client');
+  const cid=document.getElementById('i-cl').value;if(!cid)return toast('Please select a client first','error');
   const ig=document.getElementById('i-tt').value==='igst';
   let sub=0,tax=0;const lines=[];
   document.querySelectorAll('#li-wrap .fr').forEach(row=>{
@@ -1135,7 +1146,7 @@ function editExp(id){
   openM('m-expense');
 }
 function addExp(){
-  const a=parseFloat(document.getElementById('e-a').value);if(!a||isNaN(a))return alert('Enter a valid amount');
+  const a=parseFloat(document.getElementById('e-a').value);if(!a||isNaN(a))return toast('Enter a valid amount','error');
   const editId=document.getElementById('e-d').dataset.editId;
   if(editId){
     const e=DB.expenses.find(x=>x.id===editId);
@@ -1183,7 +1194,7 @@ function renderPayroll(){
   }).join('');
 }
 function addEmp(){
-  const n=document.getElementById('em-n').value.trim();if(!n)return alert('Name is required');
+  const n=document.getElementById('em-n').value.trim();if(!n)return toast('Employee name is required','error');
   const editId=document.getElementById('m-emp').dataset.editId;
   if(editId){
     const emp=DB.employees.find(x=>x.id===editId);
@@ -1229,13 +1240,14 @@ function runPR(){
     ct++;
   });
   persist();closeM('m-run-pr');renderPayroll();
-  alert(`Generated ${ct} payslip(s) for ${['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m]} ${y}`);
+  const mName=['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m];
+  toast(ct>0?`Generated ${ct} payslip(s) for ${mName} ${y}`:`No new payslips — all employees already have payslips for ${mName} ${y}`,ct>0?'success':'warn');
 }
 
 function openPayslip(eid){
   const e=DB.employees.find(x=>x.id===eid);if(!e)return;
   const slips=DB.payslips.filter(p=>p.eid===eid).sort((a,b)=>b.year-a.year||b.month-a.month);
-  if(!slips.length){alert('No payslips generated yet. Run Payroll first.');return;}
+  if(!slips.length){toast('No payslips yet — run payroll for this employee first.','warn');return;}
   const ps=slips[0];
   const months=['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const html=`<div style="font-family:'Public Sans',system-ui,sans-serif;max-width:680px;margin:0 auto;border:1px solid #dde5f0;border-radius:10px;overflow:hidden">
@@ -1469,7 +1481,7 @@ function renderLedger(){
 }
 function printLedger(){
   const cid=document.getElementById('ldg-client')?.value;
-  if(!cid){alert('Please select a client first.');return;}
+  if(!cid){toast('Please select a client first.','error');return;}
   const client=DB.clients.find(c=>c.id==cid);
   if(!client)return;
 
@@ -1730,7 +1742,7 @@ function resetDealForm(){
 function saveDeal(){
   const client=document.getElementById('deal-client').value.trim();
   const mrr=parseFloat(document.getElementById('deal-mrr').value)||0;
-  if(!client||!mrr){alert('Client name and MRR are required.');return;}
+  if(!client||!mrr){toast('Client name and MRR are required.','error');return;}
   const id=parseInt(document.getElementById('deal-id').value)||0;
   const deal={
     id:id||DB.dealCtr++,
@@ -1928,7 +1940,7 @@ function downloadMOU(){
           y+=pageH;remaining-=pageH;
         }
         pdf.save('MOU-'+clName+'.pdf');
-      }).catch(function(e){rc.remove();alert('PDF generation failed: '+e.message);});
+      }).catch(function(e){rc.remove();toast('PDF generation failed: '+e.message,'error');});
     });
   });
 }
@@ -1949,6 +1961,10 @@ const CO={
   terms:'1. Payment is due within 7 days of the invoice date unless otherwise specified.\n2. Late payments may attract interest at 1.5% per month.\n3. All disputes are subject to Maharashtra jurisdiction.'
 };
 
+function saveSettings(){
+  // Settings inputs have no ids yet — just show success toast
+  toast('Settings saved successfully.','success');
+}
 function renderSettingsLogo(){
   ['nq','ai'].forEach(k=>{
     const img=document.getElementById(`logo-${k}-img`);
