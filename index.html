@@ -1,0 +1,2061 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>NQ Financial Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+:root{
+  --bg:#F5F8FF;--surface:#FFF;--surface2:#EEF3FB;--border:#DDE5F0;
+  --text:#001931;--text2:#4A6080;--text3:#8BA0B5;
+  --sidebar-bg:#001931;--primary:#001931;--primary-h:#003060;
+  --green:#16A34A;--green-bg:#DCFCE7;--amber:#D97706;--amber-bg:#FEF3C7;
+  --red:#DC2626;--red-bg:#FEE2E2;--blue-bg:#DBEAFF;--blue-t:#001931;
+  --shadow:0 1px 3px rgba(0,25,49,.08);--shadow-md:0 4px 6px rgba(0,25,49,.1);
+  --r:10px;--sw:236px;
+}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){
+  --bg:#0D1117;--surface:#161B22;--surface2:#21262D;--border:#30363D;
+  --text:#E6EDF3;--text2:#8B949E;--text3:#6E7681;--sidebar-bg:#0D1117;
+  --green-bg:rgba(22,163,74,.18);--amber-bg:rgba(217,119,6,.18);
+  --red-bg:rgba(220,38,38,.18);--blue-bg:rgba(37,99,235,.18);--blue-t:#60A5FA;
+  --shadow:0 1px 3px rgba(0,0,0,.3);--shadow-md:0 4px 6px rgba(0,0,0,.3);
+}}
+:root[data-theme=dark]{
+  --bg:#0D1117;--surface:#161B22;--surface2:#21262D;--border:#30363D;
+  --text:#E6EDF3;--text2:#8B949E;--text3:#6E7681;--sidebar-bg:#0D1117;
+  --green-bg:rgba(22,163,74,.18);--amber-bg:rgba(217,119,6,.18);
+  --red-bg:rgba(220,38,38,.18);--blue-bg:rgba(37,99,235,.18);--blue-t:#60A5FA;
+  --shadow:0 1px 3px rgba(0,0,0,.3);--shadow-md:0 4px 6px rgba(0,0,0,.3);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Public Sans',system-ui,sans-serif;font-size:14px;background:var(--bg);color:var(--text)}
+body{display:flex;overflow:hidden}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+input,select,textarea{font-family:inherit;font-size:14px}
+.num{font-variant-numeric:tabular-nums}
+/* Sidebar */
+#sidebar{width:var(--sw);flex-shrink:0;background:var(--sidebar-bg);display:flex;flex-direction:column;height:100vh;overflow:hidden;z-index:100;transition:width .2s}
+.logo{display:flex;align-items:center;gap:10px;padding:18px 16px 14px;border-bottom:1px solid rgba(255,255,255,.07)}
+.logo-icon{width:34px;height:34px;background:#2563EB;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo-icon svg{width:18px;height:18px;fill:#fff}
+.logo-name{font-size:16px;font-weight:700;color:#fff}
+nav{flex:1;padding:10px 8px;overflow-y:auto;display:flex;flex-direction:column;gap:2px}
+.ni{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:7px;cursor:pointer;color:rgba(255,255,255,.55);white-space:nowrap;transition:all .15s;font-size:13.5px;font-weight:500}
+.ni svg{width:17px;height:17px;flex-shrink:0;opacity:.7}
+.ni:hover{background:rgba(255,255,255,.06);color:#fff}
+.ni:hover svg,.ni.active svg{opacity:1}
+.ni.active{background:rgba(37,99,235,.2);color:#60A5FA}
+.sfoot{padding:10px 8px 14px;border-top:1px solid rgba(255,255,255,.07)}
+.urow{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:7px}
+.av{width:30px;height:30px;border-radius:50%;background:#2563EB;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
+.uname{font-size:13px;font-weight:600;color:#E2E8F0}
+.urole{font-size:11px;color:rgba(255,255,255,.4)}
+.tbtn{margin-top:4px;width:100%;display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;color:rgba(255,255,255,.4);font-size:13px;cursor:pointer;transition:background .15s}
+.tbtn:hover{background:rgba(255,255,255,.06);color:#fff}
+.tbtn svg{width:15px;height:15px}
+/* Main */
+#main{flex:1;display:flex;flex-direction:column;min-width:0;height:100vh;overflow:hidden}
+.topbar{display:none;align-items:center;gap:12px;padding:12px 16px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
+.topbar-menu{width:36px;height:36px;border-radius:8px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;background:var(--surface)}
+.pc{flex:1;overflow-y:auto;padding:24px}
+/* Cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow)}
+.ch{padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.ct{font-size:14px;font-weight:600}
+.cb{padding:16px 20px}
+/* Stats */
+.sg{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:14px;margin-bottom:20px}
+.st{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow);cursor:pointer;transition:box-shadow .15s,border-color .15s}
+.st:hover{box-shadow:var(--shadow-md);border-color:var(--primary)}
+.sl{font-size:12px;color:var(--text2);font-weight:500;margin-bottom:6px}
+.sv{font-size:22px;font-weight:700;line-height:1.1}
+.ss{font-size:11px;color:var(--text3);margin-top:4px}
+.si{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.si svg{width:18px;height:18px}
+.tr{display:flex;align-items:flex-start;justify-content:space-between}
+/* Period */
+.pb{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px}
+.pbb{padding:6px 14px;border-radius:6px;font-size:12.5px;font-weight:500;background:var(--surface2);color:var(--text2);border:1px solid var(--border);cursor:pointer;transition:all .15s}
+.pbb.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+/* Charts grid */
+.cg{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+@media(max-width:700px){.cg{grid-template-columns:1fr}}
+.cw{position:relative;height:200px}
+/* Tables */
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:11.5px;font-weight:600;color:var(--text2);padding:10px 14px;border-bottom:1px solid var(--border);white-space:nowrap;letter-spacing:.03em;text-transform:uppercase}
+td{padding:11px 14px;border-bottom:1px solid var(--border);font-size:13px}
+tr:last-child td{border-bottom:none}
+tbody tr{transition:background .1s;cursor:pointer}
+tbody tr:hover{background:var(--surface2)}
+/* Badges */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.bg{background:var(--green-bg);color:var(--green)}
+.ba{background:var(--amber-bg);color:var(--amber)}
+.br{background:var(--red-bg);color:var(--red)}
+.bb{background:var(--blue-bg);color:var(--blue-t)}
+.bx{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}
+/* Page header */
+.ph{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.pt{font-size:20px;font-weight:700}
+.ps{font-size:13px;color:var(--text2);margin-top:2px}
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:7px;font-size:13.5px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap;border:none}
+.btn-p{background:var(--primary);color:#fff}
+.btn-p:hover{background:var(--primary-h)}
+.btn-o{background:var(--surface);color:var(--text);border:1px solid var(--border)}
+.btn-o:hover{background:var(--surface2)}
+.btn svg{width:15px;height:15px}
+/* Filter bar */
+.fb{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.sw_{position:relative;flex:1;min-width:160px}
+.sw_ svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--text3)}
+.si_{width:100%;padding:8px 10px 8px 32px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text);outline:none;transition:border-color .15s}
+.si_:focus{border-color:var(--primary)}
+select.fi{padding:8px 10px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text);outline:none;min-width:130px}
+/* Lists */
+.lg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+@media(max-width:800px){.lg{grid-template-columns:1fr}}
+.li{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
+.li:last-child{border-bottom:none}
+.ln{font-size:13px;font-weight:600}
+.lsub{font-size:11.5px;color:var(--text3);margin-top:1px}
+.lv{font-size:13px;font-weight:700;text-align:right}
+.lsub2{font-size:11px;color:var(--text3);margin-top:1px;text-align:right}
+/* Modal */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
+.mo{background:var(--surface);border-radius:12px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-md)}
+.mh{padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.mt{font-size:16px;font-weight:700}
+.mc{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);background:var(--surface2);border:none}
+.mc:hover{background:var(--border)}
+.mb{padding:18px 20px}
+.mf{padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.fr.full{grid-template-columns:1fr}
+.fg{display:flex;flex-direction:column;gap:5px}
+label.lbl{font-size:12px;font-weight:600;color:var(--text2);letter-spacing:.03em;text-transform:uppercase}
+input.inp,select.inp,textarea.inp{padding:8px 10px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text);outline:none;font-size:13.5px;transition:border-color .15s;width:100%}
+input.inp:focus,select.inp:focus,textarea.inp:focus{border-color:var(--primary)}
+/* Invoice detail */
+.im{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.mb_{background:var(--surface2);border-radius:8px;padding:12px 14px}
+.ml{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.mv{font-size:14px;font-weight:600}
+.tls{display:flex;justify-content:flex-end}
+.tls-b{width:280px;margin-top:12px}
+.tl{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;color:var(--text2)}
+.tl.grand{font-size:15px;font-weight:700;color:var(--text);border-top:1px solid var(--border);padding-top:10px;margin-top:4px}
+.aw{font-size:11.5px;color:var(--text2);font-style:italic;margin-top:6px;line-height:1.5}
+/* Ageing */
+.agb{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px}
+@media(max-width:600px){.agb{grid-template-columns:repeat(2,1fr)}}
+/* Mobile */
+@media(max-width:640px){
+  #sidebar{position:fixed;left:0;top:0;bottom:0;transform:translateX(-100%);transition:transform .25s}
+  #sidebar.open{transform:none}
+  .topbar{display:flex}
+  .pc{padding:16px}
+  .sv{font-size:18px}
+  .fr{grid-template-columns:1fr}
+  .im{grid-template-columns:1fr}
+}
+.hidden{display:none!important}
+.section{display:none}
+.section.active{display:block}
+.del-confirm{display:inline-flex;align-items:center;gap:6px;background:var(--red-bg);border:1px solid var(--red);border-radius:6px;padding:3px 8px;font-size:12px}
+.del-confirm span{color:var(--red);font-weight:600}
+.del-confirm button{font-size:11px;padding:2px 7px;border-radius:4px;cursor:pointer;font-weight:600;border:none}
+.del-yes{background:var(--red);color:#fff}
+.del-no{background:var(--surface2);color:var(--text2)}
+</style>
+
+<div id="sidebar">
+  <div class="logo">
+    <div class="logo-icon" style="font-size:13px;font-weight:900;letter-spacing:1px;font-family:'Public Sans',sans-serif">NQ</div>
+    <span class="logo-name">NQ Financial Tracker</span>
+  </div>
+  <nav>
+    <div class="ni active" data-s="dashboard" onclick="nav(this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>Dashboard</div>
+    <div class="ni" data-s="clients" onclick="nav(this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.7 0 8 1.34 8 4v2H4v-2c0-2.66 5.3-4 8-4zm0-2a4 4 0 100-8 4 4 0 000 8zm6 0c2.2 0 4 1.8 4 4v2h-2v-2c0-1.48-.81-2.73-2-3.43zm-12 0c-2.2 0-4 1.8-4 4v2H2v-2c0-1.71 1.8-3.43 4-3.43.24.17.5.32.77.44A6.06 6.06 0 006 12z"/></svg>Clients</div>
+    <div class="ni" data-s="invoices" onclick="nav(this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM8 18v-2h8v2H8zm0-4v-2h8v2H8zm0-4V8h4v2H8z"/></svg>Invoices</div>
+    <div class="ni" data-s="payments" onclick="nav(this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.11 0-2 .89-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>Payments</div>
+    <div class="ni" data-s="expenses" onclick="nav(this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>Expenses</div>
+    <div class="ni" data-s="payroll" onclick="nav(this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>Payroll</div>
+    <div class="ni" data-s="reports" onclick="nav(this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>Reports</div>
+    <div class="ni" data-s="ledger" onclick="nav(this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z"/></svg>Ledger</div>
+    <div class="ni" data-s="projections" onclick="nav(this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z"/></svg>Projections</div>
+    <div class="ni" data-s="mou" onclick="nav(this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20a2 2 0 002 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"/></svg>MOU / Pilot</div>
+    <div class="ni" data-s="settings" onclick="nav(this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96a6.7 6.7 0 00-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.6l2.03 1.58c-.05.3-.07.62-.07.95s.02.64.07.94l-2.03 1.58c-.18.14-.23.4-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.35 1.04.67 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.27 1.13-.59 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>Settings</div>
+  </nav>
+  <div class="sfoot">
+    <div class="urow"><div class="av" id="sb-av">R</div><div><div class="uname" id="sb-name">Rahul Sharma</div><div class="urole">Admin · Next Quarter</div></div></div>
+    <button class="tbtn" onclick="toggleTheme()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69zM12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"/></svg>Toggle Theme</button>
+    <button class="tbtn" onclick="doLogout()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>Log Out</button>
+  </div>
+</div>
+
+<div id="main">
+  <div class="topbar">
+    <button class="topbar-menu" onclick="document.getElementById('sidebar').classList.toggle('open')"><svg viewBox="0 0 24 24" fill="currentColor" style="width:18px;height:18px"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg></button>
+    <span style="font-size:15px;font-weight:700">NQ Financials</span>
+  </div>
+  <div class="pc">
+
+    <!-- DASHBOARD -->
+    <div class="section active" id="sec-dashboard">
+      <div class="ph">
+        <div><div class="pt">Dashboard</div><div class="ps">Techwave Solutions Pvt Ltd · FY 2025-26</div></div>
+        <div class="pb" id="pb">
+          <button class="pbb active" onclick="setPeriod('month',this)">This Month</button>
+          <button class="pbb" onclick="setPeriod('quarter',this)">Quarter</button>
+          <button class="pbb" onclick="setPeriod('fy',this)">Full Year</button>
+        </div>
+      </div>
+      <div class="sg">
+        <div class="st" onclick="gotoInv('')"><div class="tr"><div><div class="sl">Total Billed</div><div class="sv num" id="s-billed">—</div><div class="ss" id="s-billed-s"></div></div><div class="si" style="background:var(--blue-bg)"><svg viewBox="0 0 24 24" fill="#2563EB"><path d="M14 2H6a2 2 0 00-2 2v16l4-4h10a2 2 0 002-2V4a2 2 0 00-2-2z"/></svg></div></div></div>
+        <div class="st" onclick="nav(document.querySelector('[data-s=payments]'))"><div class="tr"><div><div class="sl">Received</div><div class="sv num" id="s-rcvd">—</div><div class="ss" id="s-rcvd-s"></div></div><div class="si" style="background:var(--green-bg)"><svg viewBox="0 0 24 24" fill="#16A34A"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg></div></div></div>
+        <div class="st" onclick="gotoInv('OVERDUE')"><div class="tr"><div><div class="sl">Overdue</div><div class="sv num" id="s-ovd">—</div><div class="ss" id="s-ovd-s"></div></div><div class="si" style="background:var(--red-bg)"><svg viewBox="0 0 24 24" fill="#DC2626"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg></div></div></div>
+        <div class="st"><div class="tr"><div><div class="sl">Expenses</div><div class="sv num" id="s-exp">—</div></div><div class="si" style="background:#F3E8FF"><svg viewBox="0 0 24 24" fill="#7C3AED"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg></div></div></div>
+        <div class="st"><div class="tr"><div><div class="sl">Net Cash</div><div class="sv num" id="s-net">—</div></div><div class="si" style="background:var(--green-bg)" id="s-net-icon"><svg viewBox="0 0 24 24" fill="#16A34A"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg></div></div></div>
+        <div class="st" onclick="gotoInv('')"><div class="tr"><div><div class="sl">Unpaid</div><div class="sv num" id="s-unpaid">—</div><div class="ss" id="s-unpaid-s"></div></div><div class="si" style="background:var(--amber-bg)"><svg viewBox="0 0 24 24" fill="#D97706"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg></div></div></div>
+      </div>
+      <div class="cg">
+        <div class="card"><div class="ch"><span class="ct">Billed vs Received (6 months)</span></div><div class="cb"><div class="cw"><canvas id="chart-bar"></canvas></div></div></div>
+        <div class="card"><div class="ch"><span class="ct">Expenses by Category</span></div><div class="cb"><div class="cw"><canvas id="chart-pie"></canvas></div></div></div>
+      </div>
+      <div class="lg">
+        <div class="card"><div class="ch"><span class="ct">🔴 Overdue Invoices</span></div><div class="cb" id="list-ovd"></div></div>
+        <div class="card"><div class="ch"><span class="ct">⏰ Due in 7 Days</span></div><div class="cb" id="list-soon"></div></div>
+        <div class="card"><div class="ch"><span class="ct">🏆 Top Clients</span></div><div class="cb" id="list-top"></div></div>
+      </div>
+    </div>
+
+    <!-- CLIENTS -->
+    <div class="section" id="sec-clients">
+      <div class="ph">
+        <div><div class="pt">Clients</div><div class="ps" id="cl-sub"></div></div>
+        <button class="btn btn-p" onclick="openM('m-client')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>Add Client</button>
+      </div>
+      <div class="fb"><div class="sw_"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg><input class="si_" placeholder="Search clients…" oninput="filterClients(this.value)"></div></div>
+      <div id="cl-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px"></div>
+    </div>
+
+    <!-- INVOICES -->
+    <div class="section" id="sec-invoices">
+      <div class="ph">
+        <div><div class="pt">Invoices</div><div class="ps" id="inv-sub"></div></div>
+        <button class="btn btn-p" onclick="openM('m-invoice')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>New Invoice</button>
+      </div>
+      <div class="fb">
+        <div class="sw_"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg><input class="si_" placeholder="Search invoice / client…" oninput="invQ=this.value;renderInvTable()"></div>
+        <select class="fi" id="inv-sf" onchange="renderInvTable()"><option value="">All Status</option><option>DRAFT</option><option>SENT</option><option>PARTIALLY_PAID</option><option>PAID</option><option>OVERDUE</option><option>CANCELLED</option></select>
+        <select class="fi" id="inv-cf" onchange="renderInvTable()"><option value="">All Clients</option></select>
+      </div>
+      <div class="card tw"><table><thead><tr><th>Invoice #</th><th>Client</th><th>Date</th><th>Due Date</th><th style="text-align:right">Amount</th><th style="text-align:right">Due</th><th>Status</th><th></th></tr></thead><tbody id="inv-body"></tbody></table></div>
+    </div>
+
+    <!-- PAYMENTS -->
+    <div class="section" id="sec-payments">
+      <div class="ph"><div><div class="pt">Payments</div><div class="ps" id="pay-sub"></div></div></div>
+      <div class="card tw"><table><thead><tr><th>Date</th><th>Invoice</th><th>Client</th><th>Mode</th><th>Reference</th><th style="text-align:right">Amount</th><th></th></tr></thead><tbody id="pay-body"></tbody></table></div>
+    </div>
+
+    <!-- EXPENSES -->
+    <div class="section" id="sec-expenses">
+      <div class="ph">
+        <div><div class="pt">Expenses</div><div class="ps" id="exp-sub"></div></div>
+        <button class="btn btn-p" onclick="openM('m-expense')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>Add Expense</button>
+      </div>
+      <div class="fb">
+        <select class="fi" id="exp-pf" onchange="renderExp()"><option value="">All Time</option><option value="month">This Month</option><option value="quarter">This Quarter</option><option value="year">This Year</option></select>
+        <select class="fi" id="exp-cf" onchange="renderExp()"><option value="">All Categories</option></select>
+      </div>
+      <div class="card tw"><table><thead><tr><th>Date</th><th>Category</th><th>Vendor</th><th>Mode</th><th style="text-align:right">Amount</th><th style="text-align:right">GST Paid</th><th>Notes</th><th></th></tr></thead><tbody id="exp-body"></tbody></table></div>
+    </div>
+
+    <!-- PAYROLL -->
+    <div class="section" id="sec-payroll">
+      <div class="ph">
+        <div><div class="pt">Payroll</div><div class="ps" id="pr-sub"></div></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-o" onclick="openM('m-run-pr')">▶ Run Payroll</button>
+          <button class="btn btn-p" onclick="openM('m-emp')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>Add Employee</button>
+        </div>
+      </div>
+      <div class="card tw"><table><thead><tr><th>Name</th><th>Designation</th><th style="text-align:right">Basic/mo</th><th style="text-align:right">Gross/mo</th><th style="text-align:right">Net/mo</th><th>Last Payslip</th><th></th><th>Actions</th></tr></thead><tbody id="pr-body"></tbody></table></div>
+    </div>
+
+    <!-- REPORTS -->
+    <div class="section" id="sec-reports">
+      <div class="ph"><div class="pt">Reports</div></div>
+      <h3 style="font-size:15px;font-weight:600;margin-bottom:12px">Receivables Ageing</h3>
+      <div class="agb" id="age-b"></div>
+      <div class="card tw" style="margin-bottom:24px"><table><thead><tr><th>Invoice</th><th>Client</th><th>Due Date</th><th>Days Overdue</th><th>Bucket</th><th style="text-align:right">Amount Due</th></tr></thead><tbody id="age-body"></tbody></table></div>
+      <h3 style="font-size:15px;font-weight:600;margin-bottom:12px">GST Summary — FY 2025-26</h3>
+      <div class="sg" id="gst-g"></div>
+    </div>
+
+    <!-- LEDGER -->
+    <div class="section" id="sec-ledger">
+      <div class="ph">
+        <div><div class="pt">Client Ledger</div><div class="ps" id="ldg-sub">Statement of account for a client</div></div>
+        <button class="btn btn-p" onclick="printLedger()">⬇ Download PDF</button>
+      </div>
+      <!-- Filters -->
+      <div class="fb" style="margin-bottom:20px;flex-wrap:wrap;gap:10px">
+        <select class="fi" id="ldg-client" onchange="renderLedger()" style="min-width:200px"><option value="">— Select Client —</option></select>
+        <select class="fi" id="ldg-period" onchange="renderLedger()">
+          <option value="all">All Time</option>
+          <option value="fy">This FY (Apr–Mar)</option>
+          <option value="month">This Month</option>
+          <option value="quarter">This Quarter</option>
+          <option value="year">This Calendar Year</option>
+        </select>
+        <div class="sw_" style="flex:0 0 auto"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19a2 2 0 002 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg><input class="si_" type="date" id="ldg-from" onchange="renderLedger()" placeholder="From"></div>
+        <div class="sw_" style="flex:0 0 auto"><input class="si_" type="date" id="ldg-to" onchange="renderLedger()" placeholder="To"></div>
+      </div>
+      <!-- Summary tiles -->
+      <div class="sg" id="ldg-kpis" style="margin-bottom:20px"></div>
+      <!-- Ledger table -->
+      <div id="ldg-content">
+        <div style="text-align:center;color:var(--text2);padding:48px;font-size:15px">Select a client above to generate their ledger</div>
+      </div>
+    </div>
+
+    <!-- PROJECTIONS -->
+    <div class="section" id="sec-projections">
+      <div class="ph">
+        <div><div class="pt">Financial Projections</div><div class="ps" id="proj-sub">ARR &amp; MRR from signed deals</div></div>
+        <button class="btn btn-p" onclick="resetDealForm();openM('m-deal')">+ Add Deal</button>
+      </div>
+      <!-- KPI tiles -->
+      <div class="sg" id="proj-kpis" style="margin-bottom:24px"></div>
+      <!-- Chart -->
+      <div class="card" style="margin-bottom:24px">
+        <div class="ch"><span class="ct">12-Month MRR Projection</span><span id="proj-chart-note" style="font-size:12px;color:var(--text2)"></span></div>
+        <div class="cb" style="height:220px"><canvas id="proj-chart"></canvas></div>
+      </div>
+      <!-- Deals table -->
+      <div class="card tw">
+        <table>
+          <thead><tr><th>Client</th><th>Tier</th><th>MRR</th><th>ARR</th><th>Start</th><th>End</th><th>Duration</th><th>Status</th><th></th></tr></thead>
+          <tbody id="proj-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- MOU / PILOT -->
+    <div class="section" id="sec-mou">
+      <div class="ph">
+        <div><div class="pt">MOU / Pilot Agreement</div><div class="ps">Generate a 7-day Pilot MOU — just change the client name</div></div>
+        <button class="btn btn-p" onclick="genMOU()">📄 Generate &amp; Download MOU</button>
+      </div>
+      <div style="max-width:560px;display:flex;flex-direction:column;gap:16px">
+        <div class="card"><div class="ch"><span class="ct">Client Details — only these change per client</span></div><div class="cb" style="display:flex;flex-direction:column;gap:14px">
+          <div class="fg"><label class="lbl">Client Company Name *</label><input class="inp" id="mou-cl-name" placeholder="e.g. RKG Creation Private Limited"></div>
+          <div class="fg"><label class="lbl">Client Type</label><select class="inp" id="mou-cl-type"><option>a company/sole proprietorship organised under the laws of India</option><option>a company registered under the Companies Act, 2013</option><option>a Limited Liability Partnership (LLP)</option><option>a sole proprietorship</option></select></div>
+          <div class="fg"><label class="lbl">Client Principal Office Address</label><input class="inp" id="mou-cl-addr" placeholder="e.g. A-28, Sector-83, Phase-II, Noida, Uttar Pradesh – 201305"></div>
+          <div class="fr">
+            <div class="fg"><label class="lbl">Effective Date</label><input class="inp" type="date" id="mou-date"></div>
+            <div class="fg"><label class="lbl">Pilot Duration (days)</label><input class="inp" type="number" id="mou-days" value="7" min="1"></div>
+          </div>
+        </div></div>
+        <!-- Hidden fixed fields -->
+        <input type="hidden" id="mou-sp-legal" value="AI Evoked (OPC) Private Limited">
+        <input type="hidden" id="mou-sp-brand" value="Next Quarter">
+        <input type="hidden" id="mou-rep1" value="Pragun Daniel Dass">
+        <input type="hidden" id="mou-rep2" value="Tanish Mehta">
+        <input type="hidden" id="mou-web" value="NXTQTR.COM">
+        <input type="hidden" id="mou-industry" value="Shopify growth, maintenance, and execution services for apparel brands">
+        <textarea id="mou-plays" style="display:none">Product Page (PDP) Upgrade
+Cart/Checkout Experience Upgrade
+Homepage Cleanup
+Offer Visibility Optimisation (COD/Shipping clarity)</textarea>
+        <button class="btn btn-p" onclick="genMOU()" style="align-self:flex-start;padding:12px 28px;font-size:15px">📄 Preview &amp; Download MOU</button>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="section" id="sec-settings">
+      <div class="ph"><div class="pt">Settings</div></div>
+      <div style="max-width:600px;display:flex;flex-direction:column;gap:16px">
+        <div class="card"><div class="ch"><span class="ct">Company Profile</span></div><div class="cb" style="display:flex;flex-direction:column;gap:12px">
+          <div class="fr"><div class="fg"><label class="lbl">Company Name</label><input class="inp" value="Techwave Solutions Pvt Ltd"></div><div class="fg"><label class="lbl">GSTIN</label><input class="inp" value="27AABCT1332L1ZS"></div></div>
+          <div class="fr"><div class="fg"><label class="lbl">PAN</label><input class="inp" value="AABCT1332L"></div><div class="fg"><label class="lbl">Invoice Prefix</label><input class="inp" value="TW"></div></div>
+          <div class="fr"><div class="fg"><label class="lbl">State</label><input class="inp" value="Maharashtra"></div><div class="fg"><label class="lbl">Payment Terms (days)</label><input class="inp" type="number" value="30"></div></div>
+        </div></div>
+        <div class="card"><div class="ch"><span class="ct">Bank & Payment</span></div><div class="cb" style="display:flex;flex-direction:column;gap:12px">
+          <div class="fr"><div class="fg"><label class="lbl">Bank Name</label><input class="inp" value="HDFC Bank"></div><div class="fg"><label class="lbl">Account Number</label><input class="inp" value="50200012345678"></div></div>
+          <div class="fr"><div class="fg"><label class="lbl">IFSC</label><input class="inp" value="HDFC0001234"></div><div class="fg"><label class="lbl">UPI ID</label><input class="inp" value="techwave@hdfcbank"></div></div>
+        </div></div>
+        <div class="card"><div class="ch"><span class="ct">Email / WhatsApp</span></div><div class="cb" style="display:flex;flex-direction:column;gap:12px">
+          <div class="fr"><div class="fg"><label class="lbl">SMTP Host</label><input class="inp" placeholder="smtp.gmail.com"></div><div class="fg"><label class="lbl">Port</label><input class="inp" placeholder="587"></div></div>
+          <div class="fr"><div class="fg"><label class="lbl">Username</label><input class="inp" placeholder="you@gmail.com"></div><div class="fg"><label class="lbl">App Password</label><input class="inp" type="password" placeholder="••••••••"></div></div>
+          <div class="fr"><div class="fg"><label class="lbl">WA Phone Number ID</label><input class="inp" placeholder="Meta Developer Console"></div><div class="fg"><label class="lbl">WA API Token</label><input class="inp" type="password" placeholder="••••••••"></div></div>
+        </div></div>
+        <div class="card"><div class="ch"><span class="ct">Logo & Branding</span></div><div class="cb" style="display:flex;flex-direction:column;gap:20px">
+          <div style="font-size:13px;color:var(--text2)">Upload logos for both entities. They appear side-by-side on all Invoices and MOU PDFs — Next Quarter on the left, AI Evoked on the right.</div>
+          <div style="display:flex;gap:24px;flex-wrap:wrap">
+            <!-- NQ Logo -->
+            <div style="display:flex;flex-direction:column;gap:10px;flex:1;min-width:200px">
+              <div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.06em">Next Quarter Logo</div>
+              <div style="display:flex;align-items:center;gap:12px">
+                <div id="logo-nq-preview" style="width:110px;height:54px;border:2px dashed var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;background:var(--surface2);overflow:hidden;flex-shrink:0">
+                  <span id="logo-nq-ph" style="font-size:10px;color:var(--text3);text-align:center">Not<br>uploaded</span>
+                  <img id="logo-nq-img" src="" alt="NQ Logo" style="max-width:100%;max-height:100%;object-fit:contain;display:none">
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px">
+                  <label class="btn btn-o" style="cursor:pointer;font-size:12px;padding:6px 12px">📁 Upload
+                    <input type="file" accept="image/*" style="display:none" onchange="uploadLogo(this,'nq')">
+                  </label>
+                  <button class="btn" style="font-size:12px;padding:6px 12px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text2);cursor:pointer" onclick="removeLogo('nq')">Remove</button>
+                </div>
+              </div>
+            </div>
+            <!-- AI Evoked Logo -->
+            <div style="display:flex;flex-direction:column;gap:10px;flex:1;min-width:200px">
+              <div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.06em">AI Evoked Logo</div>
+              <div style="display:flex;align-items:center;gap:12px">
+                <div id="logo-ai-preview" style="width:110px;height:54px;border:2px dashed var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;background:var(--surface2);overflow:hidden;flex-shrink:0">
+                  <span id="logo-ai-ph" style="font-size:10px;color:var(--text3);text-align:center">Not<br>uploaded</span>
+                  <img id="logo-ai-img" src="" alt="AI Evoked Logo" style="max-width:100%;max-height:100%;object-fit:contain;display:none">
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px">
+                  <label class="btn btn-o" style="cursor:pointer;font-size:12px;padding:6px 12px">📁 Upload
+                    <input type="file" accept="image/*" style="display:none" onchange="uploadLogo(this,'ai')">
+                  </label>
+                  <button class="btn" style="font-size:12px;padding:6px 12px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text2);cursor:pointer" onclick="removeLogo('ai')">Remove</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div></div>
+        <button class="btn btn-p" onclick="alert('Settings saved (demo mode)')">Save Settings</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="ov hidden" id="m-client" onclick="if(event.target===this)closeM('m-client')">
+  <div class="mo"><div class="mh"><span class="mt">Add Client</span><button class="mc" onclick="closeM('m-client')">✕</button></div>
+  <div class="mb">
+    <div class="fr"><div class="fg"><label class="lbl">Company Name *</label><input class="inp" id="c-n"></div><div class="fg"><label class="lbl">GSTIN</label><input class="inp" id="c-g" placeholder="22AAAAA0000A1Z5"></div></div>
+    <div class="fr"><div class="fg"><label class="lbl">State</label><select class="inp" id="c-st"><option value="">Select state</option><option>Maharashtra</option><option>Karnataka</option><option>Delhi</option><option>Tamil Nadu</option><option>Telangana</option><option>Gujarat</option><option>West Bengal</option><option>Uttar Pradesh</option></select></div><div class="fg"><label class="lbl">Payment Terms</label><select class="inp" id="c-pt"><option value="0">Immediate</option><option value="15">Net 15</option><option value="30" selected>Net 30</option><option value="45">Net 45</option><option value="60">Net 60</option></select></div></div>
+    <div class="fr"><div class="fg"><label class="lbl">Email</label><input class="inp" id="c-em" type="email"></div><div class="fg"><label class="lbl">Phone</label><input class="inp" id="c-ph" placeholder="+91 98765 43210"></div></div>
+    <div class="fr full"><div class="fg"><label class="lbl">Billing Address</label><textarea class="inp" id="c-ad" rows="2"></textarea></div></div>
+  </div>
+  <div class="mf"><button class="btn btn-o" onclick="closeM('m-client')">Cancel</button><button class="btn btn-p" onclick="addClient()">Add Client</button></div></div>
+</div>
+
+<div class="ov hidden" id="m-invoice" onclick="if(event.target===this)closeM('m-invoice')">
+  <div class="mo" style="max-width:620px"><div class="mh"><span class="mt">New Invoice</span><button class="mc" onclick="closeM('m-invoice')">✕</button></div>
+  <div class="mb">
+    <div class="fr"><div class="fg"><label class="lbl">Client *</label><select class="inp" id="i-cl"></select></div><div class="fg"><label class="lbl">Invoice Date</label><input class="inp" type="date" id="i-dt"></div></div>
+    <div class="fr"><div class="fg"><label class="lbl">Due Date</label><input class="inp" type="date" id="i-dd"></div><div class="fg"><label class="lbl">Tax Type</label><select class="inp" id="i-tt" onchange="calcTot()"><option value="cgst">CGST+SGST (Intrastate)</option><option value="igst">IGST (Interstate)</option></select></div></div>
+    <div style="margin:12px 0 8px;font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em">Line Items</div>
+    <div id="li-wrap">
+      <div class="fr" style="grid-template-columns:3fr 1fr 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:8px">
+        <div class="fg"><label class="lbl">Description</label><input class="inp li-d" placeholder="Service description"></div>
+        <div class="fg"><label class="lbl">Qty</label><input class="inp li-q" type="number" value="1" oninput="calcTot()"></div>
+        <div class="fg"><label class="lbl">Rate (₹)</label><input class="inp li-r" type="number" placeholder="0" oninput="calcTot()"></div>
+        <div class="fg"><label class="lbl">Tax%</label><select class="inp li-t" onchange="calcTot()"><option value="0">0%</option><option value="5">5%</option><option value="12">12%</option><option value="18" selected>18%</option><option value="28">28%</option></select></div>
+        <button onclick="this.parentElement.remove();calcTot()" style="padding:8px;color:var(--red);border:1px solid var(--border);border-radius:6px;background:var(--surface);cursor:pointer;margin-bottom:1px">✕</button>
+      </div>
+    </div>
+    <button class="btn btn-o" style="margin-bottom:14px;font-size:12px" onclick="addLI()">+ Add Line</button>
+    <div class="tls"><div class="tls-b" id="inv-tots"></div></div>
+  </div>
+  <div class="mf"><button class="btn btn-o" onclick="closeM('m-invoice')">Cancel</button><button class="btn btn-o" onclick="saveInv('DRAFT')">Save Draft</button><button class="btn btn-p" onclick="saveInv('SENT')">Create & Send</button></div></div>
+</div>
+
+<div class="ov hidden" id="m-pay" onclick="if(event.target===this)closeM('m-pay')">
+  <div class="mo"><div class="mh"><span class="mt">Record Payment</span><button class="mc" onclick="closeM('m-pay')">✕</button></div>
+  <div class="mb">
+    <div class="fr"><div class="fg"><label class="lbl">Amount (₹) *</label><input class="inp" type="number" id="p-a" step="0.01"></div><div class="fg"><label class="lbl">Date</label><input class="inp" type="date" id="p-d"></div></div>
+    <div class="fr"><div class="fg"><label class="lbl">Mode</label><select class="inp" id="p-m"><option>UPI</option><option>BANK</option><option>CHEQUE</option><option>CASH</option></select></div><div class="fg"><label class="lbl">Reference / UTR</label><input class="inp" id="p-r" placeholder="Transaction ID"></div></div>
+  </div>
+  <div class="mf"><button class="btn btn-o" onclick="closeM('m-pay')">Cancel</button><button class="btn btn-p" onclick="recPay()">Record Payment</button></div></div>
+</div>
+
+<div class="ov hidden" id="m-expense" onclick="if(event.target===this)closeM('m-expense')">
+  <div class="mo"><div class="mh"><span class="mt">Add Expense</span><button class="mc" onclick="closeM('m-expense')">✕</button></div>
+  <div class="mb">
+    <div class="fr"><div class="fg"><label class="lbl">Date *</label><input class="inp" type="date" id="e-d"></div><div class="fg"><label class="lbl">Amount (₹) *</label><input class="inp" type="number" id="e-a" step="0.01"></div></div>
+    <div class="fr"><div class="fg"><label class="lbl">Category *</label><select class="inp" id="e-c"><option>Rent</option><option>Software</option><option>Travel</option><option>Utilities</option><option>Marketing</option><option>Professional Fees</option><option>Office Supplies</option><option>Miscellaneous</option></select></div><div class="fg"><label class="lbl">Vendor</label><input class="inp" id="e-v" placeholder="AWS, Reliance…"></div></div>
+    <div class="fr"><div class="fg"><label class="lbl">Payment Mode</label><select class="inp" id="e-m"><option>BANK</option><option>UPI</option><option>CASH</option><option>CREDIT_CARD</option></select></div><div class="fg"><label class="lbl">GST Paid (₹)</label><input class="inp" type="number" id="e-g" value="0" step="0.01"></div></div>
+    <div class="fr full"><div class="fg"><label class="lbl">Notes</label><input class="inp" id="e-n"></div></div>
+  </div>
+  <div class="mf"><button class="btn btn-o" onclick="closeM('m-expense')">Cancel</button><button class="btn btn-p" onclick="addExp()">Add Expense</button></div></div>
+</div>
+
+<div class="ov hidden" id="m-emp" onclick="if(event.target===this)closeM('m-emp')">
+  <div class="mo"><div class="mh"><span class="mt">Add Employee</span><button class="mc" onclick="closeM('m-emp')">✕</button></div>
+  <div class="mb">
+    <div class="fr"><div class="fg"><label class="lbl">Name *</label><input class="inp" id="em-n"></div><div class="fg"><label class="lbl">Designation</label><input class="inp" id="em-d" placeholder="Software Engineer"></div></div>
+    <div class="fr"><div class="fg"><label class="lbl">Basic Salary (₹/mo)</label><input class="inp" type="number" id="em-b"></div><div class="fg"><label class="lbl">HRA (₹/mo)</label><input class="inp" type="number" id="em-h" value="0"></div></div>
+    <div class="fr"><div class="fg"><label class="lbl">Allowances (₹/mo)</label><input class="inp" type="number" id="em-a" value="0"></div><div class="fg"><label class="lbl">PF % of Basic</label><input class="inp" type="number" id="em-p" value="12"></div></div>
+    <p style="font-size:11.5px;color:var(--text2);margin-top:8px">ESI applies if gross &lt; ₹21,000/mo at 0.75%. Professional tax ₹200/mo.</p>
+  </div>
+  <div class="mf"><button class="btn btn-o" onclick="closeM('m-emp')">Cancel</button><button class="btn btn-p" onclick="addEmp()">Add Employee</button></div></div>
+</div>
+
+<div class="ov hidden" id="m-run-pr" onclick="if(event.target===this)closeM('m-run-pr')">
+  <div class="mo"><div class="mh"><span class="mt">Run Payroll</span><button class="mc" onclick="closeM('m-run-pr')">✕</button></div>
+  <div class="mb">
+    <p style="font-size:13px;color:var(--text2);margin-bottom:14px">Generate draft payslips for all active employees.</p>
+    <div class="fr"><div class="fg"><label class="lbl">Month</label><select class="inp" id="rpr-m"><option value="1">January</option><option value="2">February</option><option value="3">March</option><option value="4">April</option><option value="5">May</option><option value="6">June</option><option value="7">July</option><option value="8">August</option><option value="9">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select></div><div class="fg"><label class="lbl">Year</label><input class="inp" type="number" id="rpr-y" value="2026"></div></div>
+  </div>
+  <div class="mf"><button class="btn btn-o" onclick="closeM('m-run-pr')">Cancel</button><button class="btn btn-p" onclick="runPR()">Generate Payslips</button></div></div>
+</div>
+
+<!-- Invoice Detail -->
+<div class="ov hidden" id="m-inv-det" onclick="if(event.target===this)closeM('m-inv-det')">
+  <div class="mo" style="max-width:700px"><div class="mh">
+    <span class="mt" id="det-num"></span>
+    <div style="display:flex;gap:8px;align-items:center"><span id="det-badge"></span><button class="mc" onclick="closeM('m-inv-det')">✕</button></div>
+  </div>
+  <div class="mb">
+    <div class="im" id="det-meta"></div>
+    <div class="tw"><table><thead style="background:var(--surface2)"><tr><th>Description</th><th>HSN</th><th style="text-align:right">Qty</th><th style="text-align:right">Rate</th><th style="text-align:right">Tax%</th><th style="text-align:right">Total</th></tr></thead><tbody id="det-lines"></tbody></table></div>
+    <div class="tls"><div class="tls-b" id="det-tots"></div></div>
+    <div class="aw" id="det-words"></div>
+    <div id="det-pays" style="margin-top:16px"></div>
+  </div>
+  <div class="mf" id="det-foot"></div></div>
+</div>
+
+<script>
+// ─── HELPERS ────────────────────────────────────────────────────────────
+const fmt=d=>new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+const iso=d=>{const x=new Date(d);return x.toISOString().split('T')[0]};
+const inr=v=>'₹'+Math.abs(v/100).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+const inrK=v=>{const r=v/100;return r>=10000000?'₹'+(r/10000000).toFixed(1)+'Cr':r>=100000?'₹'+(r/100000).toFixed(1)+'L':r>=1000?'₹'+(r/1000).toFixed(0)+'K':'₹'+r.toFixed(0)};
+const ones=['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+const tens_=['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+function nw(n){if(n===0)return '';if(n<20)return ones[n];if(n<100)return tens_[Math.floor(n/10)]+(n%10?' '+ones[n%10]:'');if(n<1000)return ones[Math.floor(n/100)]+' Hundred'+(n%100?' '+nw(n%100):'');if(n<100000)return nw(Math.floor(n/1000))+' Thousand'+(n%1000?' '+nw(n%1000):'');if(n<10000000)return nw(Math.floor(n/100000))+' Lakh'+(n%100000?' '+nw(n%100000):'');return nw(Math.floor(n/10000000))+' Crore'+(n%10000000?' '+nw(n%10000000):'')}
+function aw(p){const r=Math.floor(p/100),pa=p%100;return (nw(r)||'Zero')+' Rupees'+(pa?' and '+nw(pa)+' Paise':'')+' Only'}
+
+// ─── DATA ────────────────────────────────────────────────────────────────
+const DB={
+ clients:[
+  {id:'c1',name:'Infosys Limited',gstin:'29AAACI1681G1ZR',state:'Karnataka',city:'Bengaluru',email:'accounts@infosys.com',phone:'+91 80 4567 8901',paymentTerms:30,billingAddress:'Electronics City, Phase 1'},
+  {id:'c2',name:'HDFC Bank Ltd',gstin:'22AAAAH0137A1Z5',state:'Maharashtra',city:'Mumbai',email:'accounts@hdfcbank.com',phone:'+91 22 6652 1000',paymentTerms:15,billingAddress:'HDFC House, Senapati Bapat Marg'},
+  {id:'c3',name:'Wipro Technologies',gstin:'29AAACW0017A1ZX',state:'Karnataka',city:'Bengaluru',email:'ap@wipro.com',phone:'+91 80 2844 0011',paymentTerms:45,billingAddress:'Doddakannelli, Sarjapur Road'},
+  {id:'c4',name:'TCS Ltd',gstin:'27AAACT2814G1ZU',state:'Maharashtra',city:'Mumbai',email:'accounts@tcs.com',phone:'+91 22 6778 9999',paymentTerms:30,billingAddress:'TCS House, Raveline Street, Fort'},
+  {id:'c5',name:'Mahindra & Mahindra',gstin:'27AAACM3025F1ZX',state:'Maharashtra',city:'Mumbai',email:'finance@mahindra.com',phone:'+91 22 2490 1441',paymentTerms:60,billingAddress:'Gateway Building, Apollo Bunder'},
+ ],
+ invoices:[
+  {id:'i1',num:'TW/2025-26/0001',clientId:'c1',date:'2026-09-01',due:'2026-10-01',status:'OVERDUE',subtotal:30000000,cgst:2700000,sgst:2700000,igst:0,totalTax:5400000,grand:35400000,paid:0,lines:[{desc:'Software Dev Services',hsn:'998313',qty:1,rate:25000000,tax:18,total:29500000},{desc:'Tech Consulting',hsn:'998314',qty:5,rate:1000000,tax:18,total:5900000}]},
+  {id:'i2',num:'TW/2025-26/0002',clientId:'c2',date:'2026-09-05',due:'2026-09-20',status:'PAID',subtotal:15000000,cgst:1350000,sgst:1350000,igst:0,totalTax:2700000,grand:17700000,paid:17700000,lines:[{desc:'API Integration Services',hsn:'998313',qty:1,rate:15000000,tax:18,total:17700000}]},
+  {id:'i3',num:'TW/2025-26/0003',clientId:'c3',date:'2026-08-15',due:'2026-09-29',status:'PARTIALLY_PAID',subtotal:20000000,cgst:0,sgst:0,igst:3600000,totalTax:3600000,grand:23600000,paid:10000000,lines:[{desc:'Cloud Migration',hsn:'998315',qty:1,rate:20000000,tax:18,total:23600000}]},
+  {id:'i4',num:'TW/2025-26/0004',clientId:'c4',date:'2026-09-10',due:'2026-10-10',status:'SENT',subtotal:25000000,cgst:2250000,sgst:2250000,igst:0,totalTax:4500000,grand:29500000,paid:0,lines:[{desc:'ERP Implementation',hsn:'998313',qty:1,rate:25000000,tax:18,total:29500000}]},
+  {id:'i5',num:'TW/2025-26/0005',clientId:'c5',date:'2026-08-01',due:'2026-09-30',status:'OVERDUE',subtotal:12000000,cgst:1080000,sgst:1080000,igst:0,totalTax:2160000,grand:14160000,paid:0,lines:[{desc:'Mobile App Development',hsn:'998316',qty:1,rate:12000000,tax:18,total:14160000}]},
+  {id:'i6',num:'TW/2025-26/0006',clientId:'c1',date:'2026-07-15',due:'2026-08-14',status:'PAID',subtotal:18000000,cgst:0,sgst:0,igst:3240000,totalTax:3240000,grand:21240000,paid:21240000,lines:[{desc:'Data Analytics Platform',hsn:'998313',qty:1,rate:18000000,tax:18,total:21240000}]},
+  {id:'i7',num:'TW/2025-26/0007',clientId:'c2',date:'2026-09-18',due:'2026-10-03',status:'SENT',subtotal:8000000,cgst:720000,sgst:720000,igst:0,totalTax:1440000,grand:9440000,paid:0,lines:[{desc:'Security Audit',hsn:'998315',qty:1,rate:8000000,tax:18,total:9440000}]},
+  {id:'i8',num:'TW/2025-26/0008',clientId:'c3',date:'2026-09-20',due:'2026-11-03',status:'DRAFT',subtotal:35000000,cgst:0,sgst:0,igst:6300000,totalTax:6300000,grand:41300000,paid:0,lines:[{desc:'AI/ML Implementation',hsn:'998313',qty:1,rate:35000000,tax:18,total:41300000}]},
+  {id:'i9',num:'TW/2025-26/0009',clientId:'c4',date:'2026-06-10',due:'2026-07-10',status:'PAID',subtotal:10000000,cgst:900000,sgst:900000,igst:0,totalTax:1800000,grand:11800000,paid:11800000,lines:[{desc:'Database Optimization',hsn:'998313',qty:1,rate:10000000,tax:18,total:11800000}]},
+  {id:'i10',num:'TW/2025-26/0010',clientId:'c5',date:'2026-05-15',due:'2026-07-14',status:'PAID',subtotal:16000000,cgst:1440000,sgst:1440000,igst:0,totalTax:2880000,grand:18880000,paid:18880000,lines:[{desc:'CRM Implementation',hsn:'998313',qty:1,rate:16000000,tax:18,total:18880000}]},
+ ],
+ payments:[
+  {id:'p1',invoiceId:'i2',date:'2026-09-15',amount:17700000,mode:'BANK',ref:'UTR926374810'},
+  {id:'p2',invoiceId:'i6',date:'2026-08-20',amount:21240000,mode:'UPI',ref:'UPI8374910234'},
+  {id:'p3',invoiceId:'i3',date:'2026-09-10',amount:10000000,mode:'BANK',ref:'UTR738291046'},
+  {id:'p4',invoiceId:'i9',date:'2026-07-05',amount:11800000,mode:'BANK',ref:'UTR829374650'},
+  {id:'p5',invoiceId:'i10',date:'2026-07-20',amount:18880000,mode:'BANK',ref:'UTR910283746'},
+ ],
+ expenses:[
+  {id:'x1',date:'2026-09-01',amount:5000000,cat:'Rent',vendor:'ABC Properties',mode:'BANK',gst:0,notes:'Office rent Sep'},
+  {id:'x2',date:'2026-09-03',amount:1500000,cat:'Software',vendor:'AWS',mode:'BANK',gst:270000,notes:'Cloud hosting'},
+  {id:'x3',date:'2026-09-05',amount:250000,cat:'Software',vendor:'GitHub',mode:'BANK',gst:45000,notes:''},
+  {id:'x4',date:'2026-09-10',amount:350000,cat:'Travel',vendor:'MakeMyTrip',mode:'CREDIT_CARD',gst:0,notes:'Client visit Bengaluru'},
+  {id:'x5',date:'2026-09-12',amount:180000,cat:'Utilities',vendor:'MSEDCL',mode:'UPI',gst:0,notes:'Electricity'},
+  {id:'x6',date:'2026-09-15',amount:750000,cat:'Marketing',vendor:'Google Ads',mode:'BANK',gst:135000,notes:'Sep campaign'},
+  {id:'x7',date:'2026-09-20',amount:2500000,cat:'Professional Fees',vendor:'K&S Associates',mode:'BANK',gst:450000,notes:'Legal retainer'},
+  {id:'x8',date:'2026-08-01',amount:5000000,cat:'Rent',vendor:'ABC Properties',mode:'BANK',gst:0,notes:'Office rent Aug'},
+  {id:'x9',date:'2026-08-04',amount:1500000,cat:'Software',vendor:'AWS',mode:'BANK',gst:270000,notes:'Cloud hosting'},
+  {id:'x10',date:'2026-08-18',amount:420000,cat:'Travel',vendor:'IndiGo',mode:'CREDIT_CARD',gst:0,notes:'Mumbai trip'},
+  {id:'x11',date:'2026-07-01',amount:5000000,cat:'Rent',vendor:'ABC Properties',mode:'BANK',gst:0,notes:'Office rent Jul'},
+  {id:'x12',date:'2026-07-10',amount:1600000,cat:'Software',vendor:'AWS',mode:'BANK',gst:288000,notes:'Cloud hosting'},
+  {id:'x13',date:'2026-06-01',amount:5000000,cat:'Rent',vendor:'ABC Properties',mode:'BANK',gst:0,notes:'Office rent Jun'},
+  {id:'x14',date:'2026-05-01',amount:5000000,cat:'Rent',vendor:'ABC Properties',mode:'BANK',gst:0,notes:'Office rent May'},
+  {id:'x15',date:'2026-04-01',amount:5000000,cat:'Rent',vendor:'ABC Properties',mode:'BANK',gst:0,notes:'Office rent Apr'},
+ ],
+ employees:[
+  {id:'e1',name:'Sanjay Mehta',desig:'Software Engineer',basic:8000000,hra:3200000,allow:1000000,pf:12},
+  {id:'e2',name:'Kavya Reddy',desig:'Senior Developer',basic:12000000,hra:4800000,allow:1500000,pf:12},
+  {id:'e3',name:'Vikram Singh',desig:'Project Manager',basic:15000000,hra:6000000,allow:2000000,pf:12},
+  {id:'e4',name:'Deepika Joshi',desig:'UI/UX Designer',basic:7000000,hra:2800000,allow:800000,pf:12},
+  {id:'e5',name:'Arjun Nair',desig:'DevOps Engineer',basic:10000000,hra:4000000,allow:1200000,pf:12},
+ ],
+ payslips:[],
+ invCtr:11,
+settings:{logoNQ:'',logoAI:'',companyName:'Next Quarter · AI Evoked'},
+};
+
+// ─── PERSISTENCE ────────────────────────────────────────────────────────
+// Load saved data on startup
+(function(){
+  try{
+    const saved=localStorage.getItem('nq_db');
+    if(saved){
+      const parsed=JSON.parse(saved);
+      Object.keys(parsed).forEach(k=>{if(k in DB)DB[k]=parsed[k];});
+    }
+  }catch(e){}
+})();
+
+function persist(){
+  try{localStorage.setItem('nq_db',JSON.stringify(DB));}catch(e){}
+}
+
+// Auto-persist: wrap every render/save/delete call with persist()
+// We call persist() at the end of every mutating function below.
+// Shorthand: pRender(fn) = fn() then persist()
+function pR(fn){fn();persist();}
+
+// ─── DELETE CONFIRM (replaces confirm() which is blocked in iframes) ────
+function delConfirm(btn, onYes){
+  const cell=btn.parentElement;
+  btn.style.display='none';
+  const box=document.createElement('div');box.className='del-confirm';
+  box.innerHTML='<span>Sure?</span><button class="del-yes">Yes, delete</button><button class="del-no">Cancel</button>';
+  box.querySelector('.del-yes').onclick=()=>{onYes();};
+  box.querySelector('.del-no').onclick=()=>{box.remove();btn.style.display='';};
+  cell.appendChild(box);
+}
+
+// ─── NAV ────────────────────────────────────────────────────────────────
+function nav(el){
+  document.querySelectorAll('.ni').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');
+  const s=el.dataset.s;
+  document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));
+  document.getElementById('sec-'+s).classList.add('active');
+  document.getElementById('sidebar').classList.remove('open');
+  renderSec(s);
+}
+function renderSec(s){
+  if(s==='dashboard')renderDash();
+  if(s==='clients')renderClients();
+  if(s==='invoices')renderInvTable();
+  if(s==='payments')renderPays();
+  if(s==='expenses')renderExp();
+  if(s==='payroll')renderPayroll();
+  if(s==='reports')renderReports();
+  if(s==='ledger')renderLedger();
+  if(s==='settings')renderSettingsLogo();
+  if(s==='projections')renderProjections();
+  if(s==='mou'){
+    // pre-fill today's date
+    const d=document.getElementById('mou-date');
+    if(d&&!d.value)d.value=new Date().toISOString().slice(0,10);
+  }
+}
+function gotoInv(status){
+  const el=document.querySelector('[data-s=invoices]');
+  nav(el);
+  if(status)document.getElementById('inv-sf').value=status;
+  renderInvTable();
+}
+
+// ─── THEME ──────────────────────────────────────────────────────────────
+let isDark=window.matchMedia('(prefers-color-scheme:dark)').matches;
+function toggleTheme(){isDark=!isDark;document.documentElement.setAttribute('data-theme',isDark?'dark':'light');}
+
+// ─── DASHBOARD ──────────────────────────────────────────────────────────
+let period='month';
+let barC,pieC;
+function setPeriod(p,btn){period=p;document.querySelectorAll('.pbb').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderDash();}
+function getPR(){
+  const n=new Date(),y=n.getFullYear(),m=n.getMonth();
+  if(period==='month')return{s:new Date(y,m,1),e:new Date(y,m+1,0)};
+  if(period==='quarter'){const q=Math.floor(m/3);return{s:new Date(y,q*3,1),e:new Date(y,q*3+3,0)};}
+  const fy=m>=3?y:y-1;return{s:new Date(fy,3,1),e:new Date(fy+1,2,31)};
+}
+function inR(d,r){const x=new Date(d);return x>=r.s&&x<=r.e}
+
+function renderDash(){
+  const r=getPR();
+  const invs=DB.invoices.filter(i=>inR(i.date,r)&&i.status!=='CANCELLED');
+  const exps=DB.expenses.filter(e=>inR(e.date,r));
+  const pays=DB.payments.filter(p=>inR(p.date,r));
+  const billed=invs.reduce((s,i)=>s+i.grand,0);
+  const rcvd=pays.reduce((s,p)=>s+p.amount,0);
+  const ovd=invs.filter(i=>i.status==='OVERDUE');
+  const ovdAmt=ovd.reduce((s,i)=>s+(i.grand-i.paid),0);
+  const unpaid=invs.filter(i=>['SENT','PARTIALLY_PAID','OVERDUE'].includes(i.status));
+  const unpaidAmt=unpaid.reduce((s,i)=>s+(i.grand-i.paid),0);
+  const expAmt=exps.reduce((s,e)=>s+e.amount,0);
+  const net=rcvd-expAmt;
+  document.getElementById('s-billed').textContent=inrK(billed);
+  document.getElementById('s-billed-s').textContent=invs.length+' invoices';
+  document.getElementById('s-rcvd').textContent=inrK(rcvd);
+  document.getElementById('s-rcvd-s').textContent=pays.length+' payments';
+  document.getElementById('s-ovd').textContent=inrK(ovdAmt);
+  document.getElementById('s-ovd-s').textContent=ovd.length+' invoices';
+  document.getElementById('s-exp').textContent=inrK(expAmt);
+  document.getElementById('s-net').textContent=inrK(Math.abs(net));
+  document.getElementById('s-unpaid').textContent=inrK(unpaidAmt);
+  document.getElementById('s-unpaid-s').textContent=unpaid.length+' invoices';
+  // Bar chart
+  const months=['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'];
+  const now=new Date();const cm=now.getMonth();const cy=now.getFullYear();
+  const lbls=[],bd=[],rd=[];
+  for(let i=5;i>=0;i--){
+    const mi=(cm-i+12)%12,yi=cy+(cm-i<0?-1:0);
+    lbls.push(months[mi]+" '"+String(yi).slice(-2));
+    const mI=DB.invoices.filter(inv=>{const d=new Date(inv.date);return d.getMonth()===mi&&d.getFullYear()===yi&&inv.status!=='CANCELLED';});
+    bd.push(mI.reduce((s,x)=>s+x.grand,0)/100);
+    const mP=DB.payments.filter(p=>{const d=new Date(p.date);return d.getMonth()===mi&&d.getFullYear()===yi;});
+    rd.push(mP.reduce((s,p)=>s+p.amount,0)/100);
+  }
+  const dk=document.documentElement.getAttribute('data-theme')==='dark'||(!document.documentElement.getAttribute('data-theme')&&window.matchMedia('(prefers-color-scheme:dark)').matches);
+  const gc=dk?'rgba(255,255,255,.07)':'rgba(0,0,0,.06)';
+  const tc=dk?'#6E7681':'#94A3B8';
+  if(barC)barC.destroy();
+  barC=new Chart(document.getElementById('chart-bar'),{type:'bar',data:{labels:lbls,datasets:[{label:'Billed',data:bd,backgroundColor:'#3B82F6',borderRadius:4},{label:'Received',data:rd,backgroundColor:'#22C55E',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:tc,boxWidth:12,padding:14,font:{size:11}}}},scales:{x:{ticks:{color:tc,font:{size:11}},grid:{color:gc}},y:{ticks:{color:tc,font:{size:11},callback:v=>'₹'+(v>=100000?v/100000+'L':v>=1000?v/1000+'K':v)},grid:{color:gc}}}}});
+  // Pie chart
+  const cm_={}; DB.expenses.filter(e=>inR(e.date,r)).forEach(e=>cm_[e.cat]=(cm_[e.cat]||0)+e.amount/100);
+  const cl=['#3B82F6','#22C55E','#F59E0B','#EF4444','#8B5CF6','#06B6D4','#F97316'];
+  if(pieC)pieC.destroy();
+  pieC=new Chart(document.getElementById('chart-pie'),{type:'doughnut',data:{labels:Object.keys(cm_),datasets:[{data:Object.values(cm_),backgroundColor:cl,borderWidth:2,borderColor:dk?'#161B22':'#fff'}]},options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{position:'right',labels:{color:tc,boxWidth:10,padding:10,font:{size:11}}}}}});
+  // Lists
+  const nowD=new Date();const in7=new Date(nowD.getTime()+7*86400000);
+  const ovdL=DB.invoices.filter(i=>i.status==='OVERDUE').sort((a,b)=>new Date(a.due)-new Date(b.due)).slice(0,5);
+  document.getElementById('list-ovd').innerHTML=ovdL.length?ovdL.map(i=>{const cl_=DB.clients.find(c=>c.id===i.clientId);return`<div class="li" onclick="openDet('${i.id}')" style="cursor:pointer"><div><div class="ln">${i.num}</div><div class="lsub">${cl_.name}</div></div><div><div class="lv num" style="color:var(--red)">${inr(i.grand-i.paid)}</div><div class="lsub2">${fmt(i.due)}</div></div></div>`;}).join(''):'<p style="font-size:13px;color:var(--text2)">No overdue invoices 🎉</p>';
+  const soonL=DB.invoices.filter(i=>['SENT','PARTIALLY_PAID'].includes(i.status)&&new Date(i.due)>=nowD&&new Date(i.due)<=in7).slice(0,5);
+  document.getElementById('list-soon').innerHTML=soonL.length?soonL.map(i=>{const cl_=DB.clients.find(c=>c.id===i.clientId);return`<div class="li" onclick="openDet('${i.id}')" style="cursor:pointer"><div><div class="ln">${i.num}</div><div class="lsub">${cl_.name}</div></div><div><div class="lv num">${inr(i.grand-i.paid)}</div><div class="lsub2">Due ${fmt(i.due)}</div></div></div>`;}).join(''):'<p style="font-size:13px;color:var(--text2)">None due in 7 days</p>';
+  const topM={};DB.payments.forEach(p=>{const inv=DB.invoices.find(i=>i.id===p.invoiceId);if(inv)topM[inv.clientId]=(topM[inv.clientId]||0)+p.amount;});
+  document.getElementById('list-top').innerHTML=Object.entries(topM).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([cid,amt],idx)=>{const cl_=DB.clients.find(c=>c.id===cid);return`<div class="li"><div class="ln">${idx+1}. ${cl_?.name}</div><div class="lv num">${inr(amt)}</div></div>`;}).join('');
+}
+
+// ─── CLIENTS ────────────────────────────────────────────────────────────
+let clQ='';
+function renderClients(){
+  const q=clQ.toLowerCase();
+  const list=DB.clients.filter(c=>c.name.toLowerCase().includes(q)||c.gstin?.toLowerCase().includes(q)||(c.email||'').includes(q));
+  document.getElementById('cl-sub').textContent=DB.clients.length+' total clients';
+  document.getElementById('cl-grid').innerHTML=list.map(c=>{
+    const invs=DB.invoices.filter(i=>i.clientId===c.id&&i.status!=='CANCELLED');
+    const billed=invs.reduce((s,i)=>s+i.grand,0);
+    const paid=invs.reduce((s,i)=>s+i.paid,0);
+    return`<div class="card" style="padding:18px;cursor:pointer;transition:box-shadow .15s" onmouseover="this.style.boxShadow='var(--shadow-md)'" onmouseout="this.style.boxShadow='var(--shadow)'">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <div style="width:40px;height:40px;border-radius:50%;background:var(--blue-bg);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:var(--blue-t);flex-shrink:0">${c.name.charAt(0)}</div>
+        <div><div style="font-weight:600;font-size:14px">${c.name}</div>${c.gstin?`<div style="font-size:11px;color:var(--text2)">GSTIN: ${c.gstin}</div>`:''}</div>
+      </div>
+      ${c.email?`<div style="font-size:12px;color:var(--text2);margin-bottom:3px">✉ ${c.email}</div>`:''}
+      ${c.phone?`<div style="font-size:12px;color:var(--text2);margin-bottom:3px">📱 ${c.phone}</div>`:''}
+      <div style="font-size:11px;color:var(--text2);margin-bottom:10px">Net ${c.paymentTerms} · ${c.state||'—'}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding-top:10px;border-top:1px solid var(--border);margin-bottom:10px">
+        <div><div style="font-size:10px;color:var(--text3)">BILLED</div><div class="num" style="font-size:12px;font-weight:700">${inrK(billed)}</div></div>
+        <div><div style="font-size:10px;color:var(--text3)">PAID</div><div class="num" style="font-size:12px;font-weight:700;color:var(--green)">${inrK(paid)}</div></div>
+        <div><div style="font-size:10px;color:var(--text3)">INVOICES</div><div style="font-size:12px;font-weight:700">${invs.length}</div></div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button onclick="event.stopPropagation();editClient('${c.id}')" style="flex:1;font-size:12px;padding:5px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);cursor:pointer">Edit</button>
+        <button onclick="event.stopPropagation();delConfirm(this,()=>deleteClient('${c.id}'))" style="flex:1;font-size:12px;padding:5px;border:1px solid var(--red);border-radius:6px;background:var(--surface);color:var(--red);cursor:pointer">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function filterClients(q){clQ=q;renderClients();}
+function editClient(id){
+  const c=DB.clients.find(x=>x.id===id);if(!c)return;
+  document.getElementById('c-n').value=c.name||'';
+  document.getElementById('c-g').value=c.gstin||'';
+  document.getElementById('c-st').value=c.state||'';
+  document.getElementById('c-pt').value=c.paymentTerms||30;
+  document.getElementById('c-em').value=c.email||'';
+  document.getElementById('c-ph').value=c.phone||'';
+  document.getElementById('c-ad').value=c.billingAddress||'';
+  document.getElementById('c-n').dataset.editId=id;
+  document.querySelector('#m-client .mt').textContent='Edit Client';
+  openM('m-client');
+}
+function deleteClient(id){
+  DB.clients=DB.clients.filter(c=>c.id!==id);persist();
+  renderClients();
+}
+function addClient(){
+  const n=document.getElementById('c-n').value.trim();
+  if(!n)return alert('Company name is required');
+  const editId=document.getElementById('c-n').dataset.editId;
+  if(editId){
+    const c=DB.clients.find(x=>x.id===editId);
+    if(c){Object.assign(c,{name:n,gstin:document.getElementById('c-g').value,state:document.getElementById('c-st').value,paymentTerms:parseInt(document.getElementById('c-pt').value),email:document.getElementById('c-em').value,phone:document.getElementById('c-ph').value,billingAddress:document.getElementById('c-ad').value});}
+    delete document.getElementById('c-n').dataset.editId;
+    document.querySelector('#m-client .mt').textContent='Add Client';
+  }else{
+    DB.clients.push({id:'c'+Date.now(),name:n,gstin:document.getElementById('c-g').value,state:document.getElementById('c-st').value,paymentTerms:parseInt(document.getElementById('c-pt').value),email:document.getElementById('c-em').value,phone:document.getElementById('c-ph').value,billingAddress:document.getElementById('c-ad').value,city:''});
+  }
+  persist();closeM('m-client');renderClients();
+  ['c-n','c-g','c-em','c-ph','c-ad'].forEach(id=>document.getElementById(id).value='');
+}
+
+// ─── INVOICES ───────────────────────────────────────────────────────────
+let invQ='';
+function sbadge(s){const m={DRAFT:'bx',SENT:'bb',PARTIALLY_PAID:'ba',PAID:'bg',OVERDUE:'br',CANCELLED:'bx'};const l={DRAFT:'Draft',SENT:'Sent',PARTIALLY_PAID:'Part. Paid',PAID:'Paid',OVERDUE:'Overdue',CANCELLED:'Cancelled'};return`<span class="badge ${m[s]||'bx'}">${l[s]||s}</span>`}
+function renderInvTable(){
+  const sf=document.getElementById('inv-sf')?.value||'';
+  const cf=document.getElementById('inv-cf')?.value||'';
+  const q=invQ.toLowerCase();
+  const cfsEl=document.getElementById('inv-cf');
+  if(cfsEl&&cfsEl.options.length===1)DB.clients.forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.name;cfsEl.appendChild(o);});
+  const list=DB.invoices.filter(i=>{
+    if(sf&&i.status!==sf)return false;
+    if(cf&&i.clientId!==cf)return false;
+    const cl=DB.clients.find(c=>c.id===i.clientId);
+    if(q&&!i.num.toLowerCase().includes(q)&&!cl?.name.toLowerCase().includes(q))return false;
+    return true;
+  });
+  const tot=list.reduce((s,i)=>s+i.grand,0);
+  const due=list.reduce((s,i)=>s+(i.grand-i.paid),0);
+  document.getElementById('inv-sub').textContent=list.length+' invoices · '+inrK(tot)+' billed · '+inrK(due)+' due';
+  document.getElementById('inv-body').innerHTML=list.map(i=>{
+    const cl=DB.clients.find(c=>c.id===i.clientId);
+    const d=i.grand-i.paid;
+    return`<tr>
+      <td style="color:var(--primary);font-weight:600;cursor:pointer" onclick="openDet('${i.id}')">${i.num}</td>
+      <td onclick="openDet('${i.id}')" style="cursor:pointer">${cl?.name||'—'}</td>
+      <td style="color:var(--text2);cursor:pointer" onclick="openDet('${i.id}')">${fmt(i.date)}</td>
+      <td style="color:var(--text2);cursor:pointer" onclick="openDet('${i.id}')">${fmt(i.due)}</td>
+      <td style="text-align:right;font-weight:600;cursor:pointer" class="num" onclick="openDet('${i.id}')">${inr(i.grand)}</td>
+      <td style="text-align:right;font-weight:600;${d>0?'color:var(--red)':'color:var(--green)'};cursor:pointer" class="num" onclick="openDet('${i.id}')">${inr(d)}</td>
+      <td onclick="openDet('${i.id}')" style="cursor:pointer">${sbadge(i.status)}</td>
+      <td style="white-space:nowrap">
+        <button onclick="event.stopPropagation();delConfirm(this,()=>{DB.invoices=DB.invoices.filter(x=>x.id!=='${i.id}');DB.payments=DB.payments.filter(x=>x.invoiceId!=='${i.id}');persist();renderInvTable();renderDash();})" style="font-size:12px;padding:3px 9px;border:1px solid var(--red);border-radius:5px;background:var(--surface);color:var(--red);cursor:pointer">Delete</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// Invoice detail
+let activeInv=null;
+function openDet(id){
+  activeInv=id;
+  const i=DB.invoices.find(x=>x.id===id);
+  const cl=DB.clients.find(c=>c.id===i.clientId);
+  document.getElementById('det-num').textContent=i.num;
+  document.getElementById('det-badge').innerHTML=sbadge(i.status);
+  document.getElementById('det-meta').innerHTML=`
+    <div class="mb_"><div class="ml">Bill To</div><div class="mv">${cl.name}</div><div style="font-size:12px;color:var(--text2);margin-top:4px">${cl.gstin?'GSTIN: '+cl.gstin+'<br>':''}${cl.billingAddress||''}, ${cl.city||''}, ${cl.state||''}</div></div>
+    <div class="mb_"><div class="ml">Invoice Date</div><div class="mv">${fmt(i.date)}</div><div class="ml" style="margin-top:10px">Due Date</div><div class="mv">${fmt(i.due)}</div></div>`;
+  document.getElementById('det-lines').innerHTML=i.lines.map(l=>`<tr><td>${l.desc}</td><td>${l.hsn||'—'}</td><td style="text-align:right" class="num">${l.qty}</td><td style="text-align:right" class="num">${inr(l.rate)}</td><td style="text-align:right">${l.tax}%</td><td style="text-align:right;font-weight:600" class="num">${inr(l.total)}</td></tr>`).join('');
+  const ig=i.igst>0;
+  document.getElementById('det-tots').innerHTML=`
+    <div class="tl"><span>Subtotal</span><span class="num">${inr(i.subtotal)}</span></div>
+    ${ig?`<div class="tl"><span>IGST</span><span class="num">${inr(i.igst)}</span></div>`:`<div class="tl"><span>CGST</span><span class="num">${inr(i.cgst)}</span></div><div class="tl"><span>SGST</span><span class="num">${inr(i.sgst)}</span></div>`}
+    <div class="tl grand"><span>Grand Total</span><span class="num">${inr(i.grand)}</span></div>
+    <div class="tl" style="color:var(--green)"><span>Paid</span><span class="num">${inr(i.paid)}</span></div>
+    ${i.grand-i.paid>0?`<div class="tl" style="color:var(--red);font-weight:600"><span>Balance Due</span><span class="num">${inr(i.grand-i.paid)}</span></div>`:''}`;
+  document.getElementById('det-words').textContent=aw(i.grand);
+  const pays=DB.payments.filter(p=>p.invoiceId===id);
+  document.getElementById('det-pays').innerHTML=pays.length?`<div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Payment History</div>`+pays.map(p=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px"><div><span style="font-weight:600">${p.mode}</span> · ${fmt(p.date)}<span style="color:var(--text2);margin-left:6px">${p.ref}</span></div><span class="num" style="font-weight:700;color:var(--green)">${inr(p.amount)}</span></div>`).join(''):'';
+  const foot=document.getElementById('det-foot');
+  foot.innerHTML='';
+  if(['SENT','PARTIALLY_PAID','OVERDUE'].includes(i.status)){
+    const btn=document.createElement('button');btn.className='btn btn-p';btn.innerHTML='💳 Record Payment';btn.onclick=()=>{closeM('m-inv-det');setTimeout(()=>{document.getElementById('p-a').value=((i.grand-i.paid)/100).toFixed(2);document.getElementById('p-d').value=iso(new Date());openM('m-pay');},150)};
+    foot.appendChild(btn);
+  }
+  if(i.status==='DRAFT'){
+    const btn=document.createElement('button');btn.className='btn btn-o';btn.textContent='Mark as Sent';btn.onclick=()=>{i.status='SENT';persist();closeM('m-inv-det');renderInvTable()};
+    foot.appendChild(btn);
+  }
+  const eb=document.createElement('button');eb.className='btn btn-o';eb.innerHTML='✏️ Edit Invoice';eb.onclick=()=>{closeM('m-inv-det');setTimeout(()=>editInv(id),150)};
+  foot.appendChild(eb);
+  const pb=document.createElement('button');pb.className='btn btn-p';pb.innerHTML='📄 Generate PDF';pb.onclick=()=>{closeM('m-inv-det');setTimeout(()=>openPDF(id),150)};
+  foot.appendChild(pb);
+  const db=document.createElement('button');db.className='btn';db.style.cssText='border:1px solid var(--red);color:var(--red);background:var(--surface);border-radius:7px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer';db.innerHTML='🗑 Delete';db.onclick=()=>{delConfirm(db,()=>{DB.invoices=DB.invoices.filter(x=>x.id!==id);DB.payments=DB.payments.filter(x=>x.invoiceId!==id);persist();closeM('m-inv-det');renderInvTable();renderDash();});};
+  foot.appendChild(db);
+  const cb=document.createElement('button');cb.className='btn btn-o';cb.textContent='Close';cb.onclick=()=>closeM('m-inv-det');
+  foot.appendChild(cb);
+  openM('m-inv-det');
+}
+function recPay(){
+  const i=DB.invoices.find(x=>x.id===activeInv);if(!i)return;
+  const amt=Math.round(parseFloat(document.getElementById('p-a').value)*100);
+  DB.payments.push({id:'p'+Date.now(),invoiceId:activeInv,date:document.getElementById('p-d').value,amount:amt,mode:document.getElementById('p-m').value,ref:document.getElementById('p-r').value});
+  i.paid+=amt;i.status=i.paid>=i.grand?'PAID':'PARTIALLY_PAID';
+  persist();closeM('m-pay');renderInvTable();renderPays();renderDash();
+}
+function addLI(){
+  const d=document.createElement('div');d.className='fr';d.style.cssText='grid-template-columns:3fr 1fr 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:8px';
+  d.innerHTML=`<div class="fg"><input class="inp li-d" placeholder="Description"></div><div class="fg"><input class="inp li-q" type="number" value="1" oninput="calcTot()"></div><div class="fg"><input class="inp li-r" type="number" placeholder="0" oninput="calcTot()"></div><div class="fg"><select class="inp li-t" onchange="calcTot()"><option value="0">0%</option><option value="5">5%</option><option value="12">12%</option><option value="18" selected>18%</option><option value="28">28%</option></select></div><button onclick="this.parentElement.remove();calcTot()" style="padding:8px;color:var(--red);border:1px solid var(--border);border-radius:6px;background:var(--surface);cursor:pointer;margin-bottom:1px">✕</button>`;
+  document.getElementById('li-wrap').appendChild(d);calcTot();
+}
+function calcTot(){
+  let sub=0,tax=0;
+  document.querySelectorAll('#li-wrap .fr').forEach(row=>{
+    const qty=parseFloat(row.querySelector('.li-q')?.value)||0;
+    const rate=parseFloat(row.querySelector('.li-r')?.value)||0;
+    const t=parseFloat(row.querySelector('.li-t')?.value)||0;
+    const amt=qty*rate*100;sub+=amt;tax+=amt*t/100;
+  });
+  const g=sub+tax;const ig=document.getElementById('i-tt')?.value==='igst';
+  document.getElementById('inv-tots').innerHTML=`
+    <div class="tl"><span>Subtotal</span><span class="num">${inr(sub)}</span></div>
+    ${ig?`<div class="tl"><span>IGST</span><span class="num">${inr(tax)}</span></div>`:`<div class="tl"><span>CGST</span><span class="num">${inr(tax/2)}</span></div><div class="tl"><span>SGST</span><span class="num">${inr(tax/2)}</span></div>`}
+    <div class="tl grand"><span>Grand Total</span><span class="num">${inr(g)}</span></div>`;
+}
+function saveInv(status){
+  const cid=document.getElementById('i-cl').value;if(!cid)return alert('Select a client');
+  const ig=document.getElementById('i-tt').value==='igst';
+  let sub=0,tax=0;const lines=[];
+  document.querySelectorAll('#li-wrap .fr').forEach(row=>{
+    const qty=parseFloat(row.querySelector('.li-q')?.value)||0;
+    const rate=parseFloat(row.querySelector('.li-r')?.value)||0;
+    const t=parseFloat(row.querySelector('.li-t')?.value)||0;
+    const amt=qty*rate*100;const taxAmt=amt*t/100;
+    lines.push({desc:row.querySelector('.li-d')?.value||'Service',hsn:'998313',qty,rate:rate*100,tax:t,total:amt+taxAmt});
+    sub+=amt;tax+=taxAmt;
+  });
+  const g=sub+tax;const n=DB.invCtr++;
+  const editId=document.getElementById('m-invoice').dataset.editId;
+  if(editId){
+    const inv=DB.invoices.find(x=>x.id===editId);
+    if(inv){inv.clientId=cid;inv.date=document.getElementById('i-dt').value;inv.due=document.getElementById('i-dd').value;inv.status=status;inv.subtotal=sub;inv.cgst=ig?0:tax/2;inv.sgst=ig?0:tax/2;inv.igst=ig?tax:0;inv.totalTax=tax;inv.grand=sub+tax;inv.lines=lines;}
+    delete document.getElementById('m-invoice').dataset.editId;
+    document.querySelector('#m-invoice .mt').textContent='New Invoice';
+    document.querySelector('#m-invoice .mf').innerHTML='<button class="btn btn-o" onclick="closeM(\'m-invoice\')">Cancel</button><button class="btn btn-o" onclick="saveInv(\'DRAFT\')">Save Draft</button><button class="btn btn-p" onclick="saveInv(\'SENT\')">Create & Send</button>';
+  } else {
+    DB.invoices.unshift({id:'i'+Date.now(),num:`TW/2025-26/${String(n).padStart(4,'0')}`,clientId:cid,date:document.getElementById('i-dt').value,due:document.getElementById('i-dd').value,status,subtotal:sub,cgst:ig?0:tax/2,sgst:ig?0:tax/2,igst:ig?tax:0,totalTax:tax,grand:g,paid:0,lines});
+  }
+  persist();closeM('m-invoice');renderInvTable();renderDash();
+}
+function editInv(id){
+  const i=DB.invoices.find(x=>x.id===id);if(!i)return;
+  const mo=document.getElementById('m-invoice');
+  mo.dataset.editId=id;
+  document.querySelector('#m-invoice .mt').textContent='Edit Invoice';
+  // Pre-fill client & dates
+  const sel=document.getElementById('i-cl');
+  sel.innerHTML='<option value="">Select client…</option>';
+  DB.clients.forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.name;if(c.id===i.clientId)o.selected=true;sel.appendChild(o);});
+  document.getElementById('i-dt').value=i.date;
+  document.getElementById('i-dd').value=i.due;
+  document.getElementById('i-tt').value=i.igst>0?'igst':'cgst';
+  // Rebuild line items
+  const wrap=document.getElementById('li-wrap');
+  wrap.innerHTML='';
+  i.lines.forEach(l=>{
+    wrap.insertAdjacentHTML('beforeend',`<div class="fr" style="grid-template-columns:3fr 1fr 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:8px">
+      <div class="fg"><label class="lbl">Description</label><input class="inp li-d" value="${l.desc||''}"></div>
+      <div class="fg"><label class="lbl">Qty</label><input class="inp li-q" type="number" value="${l.qty}" oninput="calcTot()"></div>
+      <div class="fg"><label class="lbl">Rate (₹)</label><input class="inp li-r" type="number" value="${(l.rate/100).toFixed(2)}" oninput="calcTot()"></div>
+      <div class="fg"><label class="lbl">Tax%</label><select class="inp li-t" onchange="calcTot()"><option value="0">0%</option><option value="5">5%</option><option value="12">12%</option><option value="18">18%</option><option value="28">28%</option></select></div>
+      <button onclick="this.parentElement.remove();calcTot()" style="padding:8px;color:var(--red);border:1px solid var(--border);border-radius:6px;background:var(--surface);cursor:pointer;margin-bottom:1px">✕</button>
+    </div>`);
+    wrap.querySelectorAll('.li-t')[wrap.querySelectorAll('.li-t').length-1].value=l.tax;
+  });
+  calcTot();
+  // Update footer buttons to show "Update Invoice"
+  document.querySelector('#m-invoice .mf').innerHTML=`<button class="btn btn-o" onclick="delete document.getElementById('m-invoice').dataset.editId;closeM('m-invoice')">Cancel</button><button class="btn btn-p" onclick="saveInv('${i.status}')">Update Invoice</button>`;
+  openM('m-invoice');
+}
+
+// ─── PAYMENTS ───────────────────────────────────────────────────────────
+function renderPays(){
+  const tot=DB.payments.reduce((s,p)=>s+p.amount,0);
+  document.getElementById('pay-sub').textContent=DB.payments.length+' payments · '+inrK(tot)+' total';
+  document.getElementById('pay-body').innerHTML=[...DB.payments].reverse().map(p=>{
+    const i=DB.invoices.find(x=>x.id===p.invoiceId);const cl=DB.clients.find(c=>c.id===i?.clientId);
+    return`<tr>
+      <td>${fmt(p.date)}</td>
+      <td style="color:var(--primary);font-weight:600;cursor:pointer" onclick="openDet('${p.invoiceId}')">${i?.num||'—'}</td>
+      <td>${cl?.name||'—'}</td>
+      <td>${p.mode}</td>
+      <td style="color:var(--text2);font-size:12px">${p.ref||'—'}</td>
+      <td style="text-align:right;font-weight:700;color:var(--green)" class="num">${inr(p.amount)}</td>
+      <td style="white-space:nowrap;display:flex;gap:4px;align-items:center">
+        <button onclick="editPayment('${p.id}')" style="font-size:12px;padding:3px 9px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--text);cursor:pointer">Edit</button>
+        <button onclick="delConfirm(this,()=>{DB.payments=DB.payments.filter(x=>x.id!=='${p.id}');persist();renderPays();renderDash();})" style="font-size:12px;padding:3px 9px;border:1px solid var(--red);border-radius:5px;background:var(--surface);color:var(--red);cursor:pointer">Delete</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+function editPayment(id){
+  const p=DB.payments.find(x=>x.id===id);if(!p)return;
+  document.getElementById('ep-id').value=p.id;
+  document.getElementById('ep-date').value=p.date;
+  document.getElementById('ep-amount').value=(p.amount/100).toFixed(2);
+  document.getElementById('ep-mode').value=p.mode;
+  document.getElementById('ep-ref').value=p.ref||'';
+  openM('m-edit-pay');
+}
+function savePayment(){
+  const id=document.getElementById('ep-id').value;
+  const p=DB.payments.find(x=>x.id===id);if(!p)return;
+  p.date=document.getElementById('ep-date').value;
+  p.amount=Math.round(parseFloat(document.getElementById('ep-amount').value||0)*100);
+  p.mode=document.getElementById('ep-mode').value;
+  p.ref=document.getElementById('ep-ref').value;
+  persist();closeM('m-edit-pay');
+  renderPays();
+}
+
+// ─── EXPENSES ───────────────────────────────────────────────────────────
+function renderExp(){
+  const cat=document.getElementById('exp-cf')?.value||'';
+  const period=document.getElementById('exp-pf')?.value||'';
+  const cats=[...new Set(DB.expenses.map(e=>e.cat))].sort();
+  const cf=document.getElementById('exp-cf');
+  if(cf&&cf.options.length===1)cats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;cf.appendChild(o);});
+  const now=new Date();const cy=now.getFullYear(),cm=now.getMonth();
+  let list=DB.expenses;
+  if(period==='month')list=list.filter(e=>{const d=new Date(e.date);return d.getFullYear()===cy&&d.getMonth()===cm;});
+  else if(period==='quarter'){const q=Math.floor(cm/3);list=list.filter(e=>{const d=new Date(e.date);return d.getFullYear()===cy&&Math.floor(d.getMonth()/3)===q;});}
+  else if(period==='year')list=list.filter(e=>new Date(e.date).getFullYear()===cy);
+  if(cat)list=list.filter(e=>e.cat===cat);
+  const tot=list.reduce((s,e)=>s+e.amount,0);
+  document.getElementById('exp-sub').textContent=list.length+' entries · '+inrK(tot)+' total';
+  document.getElementById('exp-body').innerHTML=list.map(e=>`<tr>
+    <td>${fmt(e.date)}</td>
+    <td><span class="badge bx">${e.cat}</span></td>
+    <td style="color:var(--text2)">${e.vendor||'—'}</td>
+    <td style="color:var(--text2)">${e.mode||'—'}</td>
+    <td style="text-align:right;font-weight:600" class="num">${inr(e.amount)}</td>
+    <td style="text-align:right;color:var(--text2)" class="num">${e.gst>0?inr(e.gst):'—'}</td>
+    <td style="color:var(--text2);font-size:12px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.notes||'—'}</td>
+    <td style="white-space:nowrap">
+      <button onclick="editExp('${e.id}')" style="font-size:12px;padding:3px 9px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--text);cursor:pointer;margin-right:4px">Edit</button>
+      <button onclick="delConfirm(this,()=>{DB.expenses=DB.expenses.filter(x=>x.id!=='${e.id}');persist();renderExp();})" style="font-size:12px;padding:3px 9px;border:1px solid var(--red);border-radius:5px;background:var(--surface);color:var(--red);cursor:pointer">Delete</button>
+    </td>
+  </tr>`).join('');
+}
+function editExp(id){
+  const e=DB.expenses.find(x=>x.id===id);if(!e)return;
+  document.getElementById('e-d').value=e.date;
+  document.getElementById('e-a').value=(e.amount/100).toFixed(2);
+  document.getElementById('e-c').value=e.cat;
+  document.getElementById('e-v').value=e.vendor||'';
+  document.getElementById('e-m').value=e.mode||'BANK';
+  document.getElementById('e-g').value=e.gst?(e.gst/100).toFixed(2):'';
+  document.getElementById('e-n').value=e.notes||'';
+  document.getElementById('e-d').dataset.editId=id;
+  document.querySelector('#m-expense .mt').textContent='Edit Expense';
+  openM('m-expense');
+}
+function addExp(){
+  const a=parseFloat(document.getElementById('e-a').value);if(!a||isNaN(a))return alert('Enter a valid amount');
+  const editId=document.getElementById('e-d').dataset.editId;
+  if(editId){
+    const e=DB.expenses.find(x=>x.id===editId);
+    if(e){Object.assign(e,{date:document.getElementById('e-d').value,amount:Math.round(a*100),cat:document.getElementById('e-c').value,vendor:document.getElementById('e-v').value,mode:document.getElementById('e-m').value,gst:Math.round(parseFloat(document.getElementById('e-g').value||0)*100),notes:document.getElementById('e-n').value});}
+    delete document.getElementById('e-d').dataset.editId;
+    document.querySelector('#m-expense .mt').textContent='Add Expense';
+  }else{
+    DB.expenses.unshift({id:'x'+Date.now(),date:document.getElementById('e-d').value,amount:Math.round(a*100),cat:document.getElementById('e-c').value,vendor:document.getElementById('e-v').value,mode:document.getElementById('e-m').value,gst:Math.round(parseFloat(document.getElementById('e-g').value||0)*100),notes:document.getElementById('e-n').value});
+  }
+  persist();closeM('m-expense');
+  const cf=document.getElementById('exp-cf');while(cf.options.length>1)cf.remove(1);
+  renderExp();renderDash();
+}
+
+// ─── PAYROLL ────────────────────────────────────────────────────────────
+function calcNet(e){
+  const g=e.basic+e.hra+e.allow;
+  const pf=Math.round(e.basic*(e.pf/100));
+  const esi=g<2100000?Math.round(g*0.0075):0;
+  return{gross:g,pf,esi,pt:20000,net:g-pf-esi-20000};
+}
+function renderPayroll(){
+  const totGross=DB.employees.reduce((s,e)=>s+e.basic+e.hra+e.allow,0);
+  document.getElementById('pr-sub').textContent=DB.employees.length+' employees · '+inrK(totGross)+'/mo gross';
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('pr-body').innerHTML=DB.employees.map(e=>{
+    const {gross,net}=calcNet(e);
+    const ps=DB.payslips.filter(p=>p.eid===e.id).sort((a,b)=>b.year-a.year||b.month-a.month)[0];
+    const slipBtn=ps?`<button onclick="openPayslip('${e.id}')" style="font-size:12px;padding:3px 9px;border:1px solid var(--primary);border-radius:5px;background:var(--blue-bg);color:var(--primary);cursor:pointer">View Payslip</button>`:'';
+    return`<tr>
+      <td style="font-weight:600">${e.name}</td>
+      <td style="color:var(--text2)">${e.desig}</td>
+      <td style="text-align:right" class="num">${inrK(e.basic)}</td>
+      <td style="text-align:right;font-weight:600" class="num">${inrK(gross)}</td>
+      <td style="text-align:right;font-weight:600;color:var(--green)" class="num">${inrK(net)}</td>
+      <td>${ps?`<span class="badge ${ps.status==='PAID'?'bg':'bx'}">${months[ps.month-1]} ${ps.year}</span> <span class="num" style="font-size:12px;color:var(--text2)">${inrK(ps.net)}</span>`:'<span style="color:var(--text3);font-size:12px">No payslips</span>'}</td>
+      <td>${slipBtn}</td>
+      <td style="white-space:nowrap">
+        <button onclick="editEmp('${e.id}')" style="font-size:12px;padding:3px 9px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--text2);cursor:pointer;margin-right:4px">✏️ Edit</button>
+        <button onclick="delConfirm(this,()=>deleteEmp('${e.id}'))" style="font-size:12px;padding:3px 9px;border:1px solid var(--red);border-radius:5px;background:var(--surface);color:var(--red);cursor:pointer">✕ Delete</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+function addEmp(){
+  const n=document.getElementById('em-n').value.trim();if(!n)return alert('Name is required');
+  const editId=document.getElementById('m-emp').dataset.editId;
+  if(editId){
+    const emp=DB.employees.find(x=>x.id===editId);
+    if(emp){emp.name=n;emp.desig=document.getElementById('em-d').value;emp.basic=Math.round(parseFloat(document.getElementById('em-b').value||0)*100);emp.hra=Math.round(parseFloat(document.getElementById('em-h').value||0)*100);emp.allow=Math.round(parseFloat(document.getElementById('em-a').value||0)*100);emp.pf=parseFloat(document.getElementById('em-p').value||12);}
+    delete document.getElementById('m-emp').dataset.editId;
+    document.querySelector('#m-emp .mt').textContent='Add Employee';
+    document.querySelector('#m-emp .mf button:last-child').textContent='Add Employee';
+  } else {
+    DB.employees.push({id:'e'+Date.now(),name:n,desig:document.getElementById('em-d').value,basic:Math.round(parseFloat(document.getElementById('em-b').value||0)*100),hra:Math.round(parseFloat(document.getElementById('em-h').value||0)*100),allow:Math.round(parseFloat(document.getElementById('em-a').value||0)*100),pf:parseFloat(document.getElementById('em-p').value||12)});
+  }
+  persist();closeM('m-emp');renderPayroll();
+}
+function editEmp(id){
+  const e=DB.employees.find(x=>x.id===id);if(!e)return;
+  const mo=document.getElementById('m-emp');
+  mo.dataset.editId=id;
+  document.querySelector('#m-emp .mt').textContent='Edit Employee';
+  document.getElementById('em-n').value=e.name;
+  document.getElementById('em-d').value=e.desig||'';
+  document.getElementById('em-b').value=(e.basic/100).toFixed(2);
+  document.getElementById('em-h').value=(e.hra/100).toFixed(2);
+  document.getElementById('em-a').value=(e.allow/100).toFixed(2);
+  document.getElementById('em-p').value=e.pf||12;
+  document.querySelector('#m-emp .mf button:last-child').textContent='Update Employee';
+  openM('m-emp');
+}
+function deleteEmp(id){
+  DB.employees=DB.employees.filter(x=>x.id!==id);
+  DB.payslips=DB.payslips.filter(x=>x.eid!==id);
+  persist();renderPayroll();
+}
+function runPR(){
+  const m=parseInt(document.getElementById('rpr-m').value),y=parseInt(document.getElementById('rpr-y').value);
+  let ct=0;
+  DB.employees.forEach(e=>{
+    if(DB.payslips.find(p=>p.eid===e.id&&p.month===m&&p.year===y))return;
+    const {gross,pf,esi,pt,net}=calcNet(e);
+    DB.payslips.push({id:'ps'+Date.now()+e.id,eid:e.id,month:m,year:y,gross,pf,esi,pt,net,status:'DRAFT'});
+    ct++;
+  });
+  persist();closeM('m-run-pr');renderPayroll();
+  alert(`Generated ${ct} payslip(s) for ${['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m]} ${y}`);
+}
+
+function openPayslip(eid){
+  const e=DB.employees.find(x=>x.id===eid);if(!e)return;
+  const slips=DB.payslips.filter(p=>p.eid===eid).sort((a,b)=>b.year-a.year||b.month-a.month);
+  if(!slips.length){alert('No payslips generated yet. Run Payroll first.');return;}
+  const ps=slips[0];
+  const months=['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const html=`<div style="font-family:'Public Sans',system-ui,sans-serif;max-width:680px;margin:0 auto;border:1px solid #dde5f0;border-radius:10px;overflow:hidden">
+    <div style="background:#001931;color:#fff;padding:20px 28px;display:flex;justify-content:space-between;align-items:center">
+      <div style="display:flex;align-items:center;gap:12px">${getLogoBlock(true)}${DB.settings.logoAI?`<img src="${DB.settings.logoAI}" style="max-height:40px;max-width:110px;object-fit:contain;opacity:.85" alt="AI Evoked">`:`<div style="font-size:11px;opacity:.6;color:#fff;line-height:1.3">AI Evoked</div>`}</div>
+      <div style="text-align:right"><div style="font-size:18px;font-weight:700">PAYSLIP</div><div style="font-size:12px;opacity:.8">${months[ps.month]} ${ps.year}</div></div>
+    </div>
+    <div style="padding:24px 28px;background:#f5f8ff">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:13px;margin-bottom:20px">
+        <div><b>Employee:</b> ${e.name}</div><div><b>Designation:</b> ${e.desig}</div>
+        <div><b>Pay Period:</b> ${months[ps.month]} ${ps.year}</div><div><b>Status:</b> <span style="color:${ps.status==='PAID'?'#16a34a':'#d97706'};font-weight:700">${ps.status}</span></div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="background:#001931;color:#fff"><th style="padding:8px 12px;text-align:left">Earnings</th><th style="padding:8px 12px;text-align:right">Amount</th><th style="padding:8px 12px;text-align:left">Deductions</th><th style="padding:8px 12px;text-align:right">Amount</th></tr></thead>
+        <tbody>
+          <tr style="border-bottom:1px solid #dde5f0"><td style="padding:8px 12px">Basic Salary</td><td style="padding:8px 12px;text-align:right;font-variant-numeric:tabular-nums">${inr(e.basic)}</td><td style="padding:8px 12px">PF (12%)</td><td style="padding:8px 12px;text-align:right;font-variant-numeric:tabular-nums">${inr(ps.pf)}</td></tr>
+          <tr style="border-bottom:1px solid #dde5f0"><td style="padding:8px 12px">HRA</td><td style="padding:8px 12px;text-align:right;font-variant-numeric:tabular-nums">${inr(e.hra)}</td><td style="padding:8px 12px">ESI (0.75%)</td><td style="padding:8px 12px;text-align:right;font-variant-numeric:tabular-nums">${inr(ps.esi)}</td></tr>
+          <tr><td style="padding:8px 12px">Allowances</td><td style="padding:8px 12px;text-align:right;font-variant-numeric:tabular-nums">${inr(e.allow)}</td><td style="padding:8px 12px">Prof. Tax</td><td style="padding:8px 12px;text-align:right;font-variant-numeric:tabular-nums">${inr(ps.pt)}</td></tr>
+        </tbody>
+        <tfoot>
+          <tr style="background:#eef3fb;font-weight:700"><td style="padding:10px 12px">Gross Pay</td><td style="padding:10px 12px;text-align:right;font-variant-numeric:tabular-nums">${inr(ps.gross)}</td><td style="padding:10px 12px">Total Deductions</td><td style="padding:10px 12px;text-align:right;font-variant-numeric:tabular-nums">${inr(ps.pf+ps.esi+ps.pt)}</td></tr>
+        </tfoot>
+      </table>
+      <div style="display:flex;justify-content:flex-end;margin-top:16px">
+        <div style="background:#001931;color:#fff;padding:12px 24px;border-radius:8px;text-align:right">
+          <div style="font-size:11px;opacity:.7;text-transform:uppercase;letter-spacing:.08em">Net Pay</div>
+          <div style="font-size:22px;font-weight:800;font-variant-numeric:tabular-nums">${inr(ps.net)}</div>
+        </div>
+      </div>
+      ${slips.length>1?`<div style="margin-top:14px;font-size:12px;color:#4a6080">All payslips: ${slips.map(s=>`${months[s.month]} ${s.year}`).join(', ')}</div>`:''}
+    </div>
+  </div>`;
+  document.getElementById('slip-body').innerHTML=html;
+  openM('m-slip');
+}
+
+// ─── REPORTS ────────────────────────────────────────────────────────────
+function renderReports(){
+  const now=new Date();
+  const unpaid=DB.invoices.filter(i=>['SENT','PARTIALLY_PAID','OVERDUE'].includes(i.status));
+  const age=unpaid.map(i=>{const diff=Math.floor((now-new Date(i.due))/86400000);let b=diff<0?'Not Due':diff<=30?'0-30 days':diff<=60?'31-60 days':diff<=90?'61-90 days':'90+ days';return{...i,diff,bucket:b};});
+  const bkts=['Not Due','0-30 days','31-60 days','61-90 days','90+ days'];
+  const bcl=['var(--green)','var(--amber)','#F97316','var(--red)','#7C3AED'];
+  document.getElementById('age-b').innerHTML=bkts.map((b,i)=>{const items=age.filter(a=>a.bucket===b);const tot=items.reduce((s,x)=>s+(x.grand-x.paid),0);return`<div class="card" style="padding:14px"><div style="font-size:10px;font-weight:700;color:${bcl[i]};text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">${b}</div><div class="num" style="font-size:18px;font-weight:700">${inrK(tot)}</div><div style="font-size:11px;color:var(--text2);margin-top:2px">${items.length} invoice${items.length!==1?'s':''}</div></div>`;}).join('');
+  document.getElementById('age-body').innerHTML=age.map(i=>{const cl=DB.clients.find(c=>c.id===i.clientId);return`<tr onclick="openDet('${i.id}')"><td style="font-weight:600;color:var(--primary)">${i.num}</td><td>${cl?.name}</td><td>${fmt(i.due)}</td><td style="color:${i.diff>0?'var(--red)':'var(--text2)'}">${i.diff>0?i.diff+' days':'—'}</td><td>${`<span class="badge ${i.diff>90?'br':i.diff>60?'br':i.diff>30?'ba':i.diff>0?'ba':'bg'}">${i.bucket}</span>`}</td><td style="text-align:right;font-weight:600" class="num">${inr(i.grand-i.paid)}</td></tr>`;}).join('');
+  const fyS=new Date(2025,3,1);
+  const fyI=DB.invoices.filter(i=>new Date(i.date)>=fyS&&i.status!=='CANCELLED');
+  const oCGST=fyI.reduce((s,i)=>s+i.cgst,0);
+  const oSGST=fyI.reduce((s,i)=>s+i.sgst,0);
+  const oIGST=fyI.reduce((s,i)=>s+i.igst,0);
+  const inGST=DB.expenses.filter(e=>new Date(e.date)>=fyS).reduce((s,e)=>s+e.gst,0);
+  const netGST=oCGST+oSGST+oIGST-inGST;
+  document.getElementById('gst-g').innerHTML=`
+    <div class="st"><div class="sl">Output CGST</div><div class="sv num">${inrK(oCGST)}</div></div>
+    <div class="st"><div class="sl">Output SGST</div><div class="sv num">${inrK(oSGST)}</div></div>
+    <div class="st"><div class="sl">Output IGST</div><div class="sv num">${inrK(oIGST)}</div></div>
+    <div class="st"><div class="sl">Input Tax Credit</div><div class="sv num" style="color:var(--green)">${inrK(inGST)}</div></div>
+    <div class="st" style="grid-column:1/-1"><div style="display:flex;align-items:center;justify-content:space-between"><div class="sl" style="font-size:14px;font-weight:600">Net GST Payable</div><div class="sv num" style="color:${netGST>0?'var(--red)':'var(--green)'}">${inr(Math.abs(netGST))}</div></div><div style="font-size:11px;color:var(--text2);margin-top:4px">Estimate only. Consult your CA for actual returns. ITC restrictions may apply.</div></div>`;
+}
+
+// ─── LOGIN ───────────────────────────────────────────────────────────────
+const USERS=[
+  {user:'admin',   pass:'nxtqtr@2026', name:'Pragun Daniel Dass', initials:'P'},
+  {user:'tanish',  pass:'nxtqtr@2026', name:'Tanish Mehta',       initials:'T'},
+  {user:'nextqtr', pass:'pilot@2026',  name:'Next Quarter',        initials:'N'},
+];
+function doLogin(){
+  const u=(document.getElementById('l-user').value||'').trim().toLowerCase();
+  const p=document.getElementById('l-pass').value;
+  const found=USERS.find(x=>x.user===u&&x.pass===p);
+  const err=document.getElementById('login-err');
+  if(!found){err.textContent='Invalid username or password.';err.style.display='block';document.getElementById('l-pass').value='';return;}
+  err.style.display='none';
+  // Store session
+  try{sessionStorage.setItem('bt-user',JSON.stringify({name:found.name,initials:found.initials}));}catch(e){}
+  document.getElementById('sb-name').textContent=found.name;
+  document.getElementById('sb-av').textContent=found.initials;
+  document.getElementById('login-screen').style.display='none';
+}
+function doLogout(){
+  try{sessionStorage.removeItem('bt-user');}catch(e){}
+  document.getElementById('l-user').value='';
+  document.getElementById('l-pass').value='';
+  document.getElementById('login-screen').style.display='flex';
+}
+// Auto-restore session
+(function(){
+  try{
+    const s=JSON.parse(sessionStorage.getItem('bt-user')||'null');
+    if(s){
+      document.getElementById('sb-name').textContent=s.name;
+      document.getElementById('sb-av').textContent=s.initials;
+      document.getElementById('login-screen').style.display='none';
+    }
+  }catch(e){}
+})();
+
+// ─── PROJECTIONS ─────────────────────────────────────────────────────────
+DB.deals=[
+  {id:1,client:'Bonsoir',tier:'Core',mrr:25000,start:'2026-08-01',end:'2026-10-31',status:'active',notes:'3-month pilot → retainer'},
+  {id:2,client:'Sample Brand',tier:'Lite',mrr:12000,start:'2026-09-01',end:'',status:'upcoming',notes:'Starting Oct'},
+];
+DB.dealCtr=3;
+
+let projChart=null;
+
+function inrShort(n){
+  if(n>=1e7)return '₹'+(n/1e7).toFixed(2)+' Cr';
+  if(n>=1e5)return '₹'+(n/1e5).toFixed(2)+' L';
+  return '₹'+n.toLocaleString('en-IN');
+}
+
+function dealMonthsActive(d,ym){
+  // ym = {y,m} 0-indexed month; returns true if deal is active that month
+  if(d.status==='churned')return false;
+  const sd=new Date(d.start+'T00:00:00');
+  const sy=sd.getFullYear(),sm=sd.getMonth();
+  if(ym.y<sy||(ym.y===sy&&ym.m<sm))return false;
+  if(d.end){
+    const ed=new Date(d.end+'T00:00:00');
+    const ey=ed.getFullYear(),em=ed.getMonth();
+    if(ym.y>ey||(ym.y===ey&&ym.m>em))return false;
+  }
+  return true;
+}
+
+function renderLedger(){
+  // Populate client dropdown
+  const sel=document.getElementById('ldg-client');
+  if(sel){
+    const cur=sel.value;
+    sel.innerHTML='<option value="">— Select Client —</option>'+DB.clients.map(c=>`<option value="${c.id}"${c.id==cur?' selected':''}>${c.name}</option>`).join('');
+  }
+  const cid=document.getElementById('ldg-client')?.value;
+  const period=document.getElementById('ldg-period')?.value||'all';
+  const fromV=document.getElementById('ldg-from')?.value;
+  const toV=document.getElementById('ldg-to')?.value;
+  const content=document.getElementById('ldg-content');
+  const kpis=document.getElementById('ldg-kpis');
+  const sub=document.getElementById('ldg-sub');
+  if(!cid){
+    if(content)content.innerHTML='<div style="text-align:center;color:var(--text2);padding:48px;font-size:15px">Select a client above to generate their ledger</div>';
+    if(kpis)kpis.innerHTML='';
+    return;
+  }
+  const client=DB.clients.find(c=>c.id==cid);
+  if(sub&&client)sub.textContent='Statement of account — '+client.name;
+  // Date range from period
+  const now=new Date();
+  let dfrom=null,dto=null;
+  if(period==='month'){dfrom=new Date(now.getFullYear(),now.getMonth(),1);dto=new Date(now.getFullYear(),now.getMonth()+1,0);}
+  else if(period==='quarter'){const q=Math.floor(now.getMonth()/3);dfrom=new Date(now.getFullYear(),q*3,1);dto=new Date(now.getFullYear(),q*3+3,0);}
+  else if(period==='year'){dfrom=new Date(now.getFullYear(),0,1);dto=new Date(now.getFullYear(),11,31);}
+  else if(period==='fy'){const y=now.getMonth()>=3?now.getFullYear():now.getFullYear()-1;dfrom=new Date(y,3,1);dto=new Date(y+1,2,31);}
+  if(fromV)dfrom=new Date(fromV);
+  if(toV)dto=new Date(toV);
+  // Build ledger entries: invoices=debit, payments=credit
+  const entries=[];
+  DB.invoices.filter(i=>i.clientId==cid).forEach(i=>{
+    const d=new Date(i.date);
+    if(dfrom&&d<dfrom)return;if(dto&&d>dto)return;
+    entries.push({date:d,type:'Invoice',ref:i.num,desc:'Invoice raised',debit:i.grand,credit:0,invId:i.id});
+  });
+  DB.payments.filter(p=>{const inv=DB.invoices.find(i=>i.id===p.invoiceId);return inv&&inv.clientId==cid;}).forEach(p=>{
+    const d=new Date(p.date);
+    if(dfrom&&d<dfrom)return;if(dto&&d>dto)return;
+    const inv=DB.invoices.find(i=>i.id===p.invoiceId);
+    entries.push({date:d,type:'Payment',ref:inv?inv.num:'—',desc:'Payment received ('+p.mode+')',debit:0,credit:p.amount});
+  });
+  entries.sort((a,b)=>a.date-b.date);
+  // Running balance
+  let balance=0,totalBilled=0,totalPaid=0;
+  const rows=entries.map(e=>{
+    balance+=e.debit-e.credit;
+    totalBilled+=e.debit;totalPaid+=e.credit;
+    const balClass=balance>0?'style="color:var(--red)"':balance<0?'style="color:var(--green)"':'';
+    return `<tr>
+      <td>${e.date.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}</td>
+      <td><span class="badge ${e.type==='Invoice'?'bb':'bg'}">${e.type}</span></td>
+      <td>${e.desc}</td>
+      <td>${e.ref}</td>
+      <td style="text-align:right;color:var(--red)">${e.debit?inr(e.debit):'—'}</td>
+      <td style="text-align:right;color:var(--green)">${e.credit?inr(e.credit):'—'}</td>
+      <td style="text-align:right;font-weight:600" ${balClass}>${inr(Math.abs(balance))} ${balance>0?'Dr':balance<0?'Cr':''}</td>
+    </tr>`;
+  });
+  const outstanding=totalBilled-totalPaid;
+  // KPI tiles
+  if(kpis)kpis.innerHTML=`
+    <div class="kc"><div class="kl">Total Billed</div><div class="kv">${inr(totalBilled)}</div></div>
+    <div class="kc"><div class="kl">Total Received</div><div class="kv" style="color:var(--green)">${inr(totalPaid)}</div></div>
+    <div class="kc"><div class="kl">Outstanding</div><div class="kv" style="color:${outstanding>0?'var(--red)':'var(--green)'}">${inr(outstanding)}</div></div>
+    <div class="kc"><div class="kl">Transactions</div><div class="kv">${entries.length}</div></div>`;
+  if(!rows.length){
+    if(content)content.innerHTML='<div style="text-align:center;color:var(--text2);padding:48px">No transactions found for the selected period</div>';
+    return;
+  }
+  if(content)content.innerHTML=`<div style="overflow-x:auto"><table class="tbl" id="ldg-table">
+    <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Reference</th><th style="text-align:right">Debit (₹)</th><th style="text-align:right">Credit (₹)</th><th style="text-align:right">Balance</th></tr></thead>
+    <tbody>${rows.join('')}</tbody>
+    <tfoot><tr style="font-weight:700;background:var(--surface2)">
+      <td colspan="4">Closing Balance</td>
+      <td style="text-align:right;color:var(--red)">${inr(totalBilled)}</td>
+      <td style="text-align:right;color:var(--green)">${inr(totalPaid)}</td>
+      <td style="text-align:right;color:${outstanding>0?'var(--red)':'var(--green)'}">${inr(outstanding)} ${outstanding>0?'Dr':'Cr'}</td>
+    </tr></tfoot>
+  </table></div>`;
+}
+function printLedger(){
+  const cid=document.getElementById('ldg-client')?.value;
+  if(!cid){alert('Please select a client first.');return;}
+  window.print();
+}
+
+function renderProjections(){
+  const deals=DB.deals;
+  const today=new Date();
+  const ty=today.getFullYear(),tm=today.getMonth();
+
+  // Current active MRR
+  const activeMRR=deals.filter(d=>d.status==='active'&&dealMonthsActive(d,{y:ty,m:tm})).reduce((s,d)=>s+d.mrr,0);
+  const activeARR=activeMRR*12;
+  const totalDeals=deals.length;
+  const activeCount=deals.filter(d=>d.status==='active').length;
+  const upcomingMRR=deals.filter(d=>d.status==='upcoming').reduce((s,d)=>s+d.mrr,0);
+
+  // KPI tiles
+  document.getElementById('proj-kpis').innerHTML=`
+    <div class="card kc"><div class="kl">MRR (Current)</div><div class="kv">${inrShort(activeMRR)}</div><div class="kb">Active contracts this month</div></div>
+    <div class="card kc"><div class="kl">ARR (Current)</div><div class="kv">${inrShort(activeARR)}</div><div class="kb">MRR × 12</div></div>
+    <div class="card kc"><div class="kl">Pipeline MRR</div><div class="kv" style="color:var(--amber)">${inrShort(upcomingMRR)}</div><div class="kb">Upcoming deals</div></div>
+    <div class="card kc"><div class="kl">Active Deals</div><div class="kv">${activeCount}</div><div class="kb">${totalDeals} total</div></div>`;
+
+  // 12-month projection
+  const labels=[],mrrData=[],arrData=[];
+  for(let i=0;i<12;i++){
+    let m=tm+i,y=ty;if(m>11){m-=12;y++;}
+    const mo=deals.filter(d=>d.status!=='churned'&&dealMonthsActive(d,{y,m})).reduce((s,d)=>s+d.mrr,0);
+    labels.push(new Date(y,m,1).toLocaleString('en-IN',{month:'short',year:'2-digit'}));
+    mrrData.push(mo);
+    arrData.push(mo*12);
+  }
+  document.getElementById('proj-chart-note').textContent='Next 12 months · active + upcoming';
+
+  if(projChart)projChart.destroy();
+  const ctx=document.getElementById('proj-chart').getContext('2d');
+  projChart=new Chart(ctx,{
+    type:'bar',
+    data:{labels,datasets:[
+      {label:'MRR',data:mrrData,backgroundColor:'rgba(37,99,235,.75)',borderRadius:4,yAxisID:'y'},
+      {label:'ARR',data:arrData,type:'line',borderColor:'#16A34A',backgroundColor:'transparent',borderWidth:2,pointRadius:3,tension:.3,yAxisID:'y2'},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index'},plugins:{legend:{position:'top',labels:{boxWidth:12,font:{size:11}}}},scales:{
+      y:{position:'left',ticks:{callback:v=>inrShort(v),font:{size:10}},grid:{color:'rgba(0,0,0,.05)'}},
+      y2:{position:'right',ticks:{callback:v=>inrShort(v),font:{size:10}},grid:{display:false}},
+    }}
+  });
+
+  // Deals table
+  const statusBadge={active:`<span class="sbadge s-paid">Active</span>`,upcoming:`<span class="sbadge s-sent">Upcoming</span>`,churned:`<span class="sbadge s-over">Churned</span>`};
+  const rows=deals.map(d=>{
+    const sd=new Date(d.start+'T00:00:00');
+    const ed=d.end?new Date(d.end+'T00:00:00'):null;
+    let dur='-';
+    if(ed){const ms=ed-sd;const mo=Math.round(ms/(1000*60*60*24*30.44));dur=mo+' mo';}
+    else if(d.status!=='churned')dur='Ongoing';
+    return `<tr>
+      <td><b>${d.client}</b>${d.notes?`<div style="font-size:11px;color:var(--text2)">${d.notes}</div>`:''}
+      </td>
+      <td><span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;background:var(--surface2)">${d.tier}</span></td>
+      <td class="num"><b>${inrShort(d.mrr)}</b></td>
+      <td class="num" style="color:var(--green)">${inrShort(d.mrr*12)}</td>
+      <td>${sd.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}</td>
+      <td>${ed?ed.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}):'—'}</td>
+      <td>${dur}</td>
+      <td>${statusBadge[d.status]||d.status}</td>
+      <td style="white-space:nowrap">
+        <button onclick="editDeal(${d.id})" style="font-size:12px;padding:3px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--text);cursor:pointer">Edit</button>
+        <button onclick="delConfirm(this,()=>{DB.deals=DB.deals.filter(x=>x.id!==${d.id});persist();renderProjections();})" style="font-size:12px;padding:3px 8px;border:1px solid var(--red);border-radius:5px;background:var(--surface);color:var(--red);cursor:pointer;margin-left:4px">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+  document.getElementById('proj-body').innerHTML=rows||`<tr><td colspan="9" style="text-align:center;color:var(--text2);padding:24px">No deals yet — click "+ Add Deal"</td></tr>`;
+}
+
+function resetDealForm(){
+  document.getElementById('deal-modal-title').textContent='Add Deal';
+  document.getElementById('deal-id').value='';
+  document.getElementById('deal-client').value='';
+  document.getElementById('deal-tier').value='Core';
+  document.getElementById('deal-mrr').value='';
+  document.getElementById('deal-status').value='active';
+  document.getElementById('deal-start').value=new Date().toISOString().slice(0,10);
+  document.getElementById('deal-end').value='';
+  document.getElementById('deal-notes').value='';
+}
+function saveDeal(){
+  const client=document.getElementById('deal-client').value.trim();
+  const mrr=parseFloat(document.getElementById('deal-mrr').value)||0;
+  if(!client||!mrr){alert('Client name and MRR are required.');return;}
+  const id=parseInt(document.getElementById('deal-id').value)||0;
+  const deal={
+    id:id||DB.dealCtr++,
+    client,
+    tier:document.getElementById('deal-tier').value,
+    mrr,
+    start:document.getElementById('deal-start').value||new Date().toISOString().slice(0,10),
+    end:document.getElementById('deal-end').value,
+    status:document.getElementById('deal-status').value,
+    notes:document.getElementById('deal-notes').value.trim(),
+  };
+  if(id){const i=DB.deals.findIndex(d=>d.id===id);if(i>=0)DB.deals[i]=deal;else DB.deals.push(deal);}
+  else DB.deals.push(deal);
+  persist();closeM('m-deal');
+  renderProjections();
+}
+
+function editDeal(id){
+  const d=DB.deals.find(x=>x.id===id);if(!d)return;
+  document.getElementById('deal-modal-title').textContent='Edit Deal';
+  document.getElementById('deal-id').value=d.id;
+  document.getElementById('deal-client').value=d.client;
+  document.getElementById('deal-tier').value=d.tier;
+  document.getElementById('deal-mrr').value=d.mrr;
+  document.getElementById('deal-status').value=d.status;
+  document.getElementById('deal-start').value=d.start;
+  document.getElementById('deal-end').value=d.end||'';
+  document.getElementById('deal-notes').value=d.notes||'';
+  openM('m-deal');
+}
+
+function deleteDeal(id){
+  DB.deals=DB.deals.filter(d=>d.id!==Number(id));persist();
+  renderProjections();
+}
+
+// ─── MOU GENERATOR ───────────────────────────────────────────────────────
+function ordinal(n){const s=['th','st','nd','rd'],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);}
+function mouDateStr(d){
+  const dt=new Date(d+'T00:00:00');
+  return ordinal(dt.getDate())+' day of '+dt.toLocaleString('en-IN',{month:'long'})+', '+dt.getFullYear();
+}
+
+function genMOU(){
+  const clName=document.getElementById('mou-cl-name').value.trim()||'[Client Company Name]';
+  const clType=document.getElementById('mou-cl-type').value;
+  const clAddr=document.getElementById('mou-cl-addr').value.trim()||'[Client Address]';
+  const dateVal=document.getElementById('mou-date').value||new Date().toISOString().slice(0,10);
+  const days=parseInt(document.getElementById('mou-days').value)||7;
+  const spLegal=document.getElementById('mou-sp-legal').value.trim()||'AI Evoked (OPC) Private Limited';
+  const spBrand=document.getElementById('mou-sp-brand').value.trim()||'Next Quarter';
+  const rep1=document.getElementById('mou-rep1').value.trim()||'Pragun Daniel Dass';
+  const rep2=document.getElementById('mou-rep2').value.trim()||'Tanish Mehta';
+  const web=document.getElementById('mou-web').value.trim()||'NXTQTR.COM';
+  const industry=document.getElementById('mou-industry').value.trim();
+  const plays=document.getElementById('mou-plays').value.trim().split('\n').filter(Boolean);
+  const dtObj=new Date(dateVal+'T00:00:00');
+  const startStr=dtObj.toLocaleDateString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric'}).replace(/\//g,'/');
+
+  // Shared page header & footer (matches the PDF exactly)
+  const pgHead=`<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">
+    <div style="max-height:44px;display:flex;align-items:center">${DB.settings.logo?`<img src="${DB.settings.logo}" style="max-height:40px;max-width:120px;object-fit:contain" alt="Logo">`:`<div style="font-size:26px;font-weight:900;letter-spacing:2px;font-family:'Arial Black',Arial,sans-serif;color:#111">N Q</div>`}</div>
+    <div style="text-align:center">
+      <div style="font-size:30px;font-weight:900;line-height:1.15;font-family:'Arial Black',Arial,sans-serif;color:#111">MEMORANDUM OF<br>UNDERSTANDING</div>
+      <div style="font-size:14px;color:#333;margin-top:6px;font-family:Arial,sans-serif">For ${spBrand} ${days}-day Growth Pilot</div>
+    </div>
+    <div style="text-align:right">${getAILogoBlock()}</div>
+  </div>`;
+  const pgFoot=`<div style="text-align:center;font-size:13px;font-weight:700;letter-spacing:.12em;color:#333;font-family:Arial,sans-serif;margin-top:32px;padding-top:14px;border-top:1px solid #aaa">${web}</div>`;
+
+  // Body text style
+  const B='font-family:Arial,sans-serif;font-size:13.5px;font-weight:700;line-height:1.75;color:#111;margin:0 0 14px 0';
+  const N='font-family:Arial,sans-serif;font-size:13.5px;font-weight:400;line-height:1.75;color:#111;margin:0 0 14px 0';
+  const H='font-family:Arial,sans-serif;font-size:13.5px;font-weight:700;line-height:1.75;color:#111;margin:0 0 6px 0';
+
+  // Page wrapper style (matches the card/border in the PDF)
+  const pw=(content)=>`<div style="border:1px solid #ccc;border-radius:4px;padding:30px 36px;margin-bottom:0;background:#fff;page-break-after:always">
+    ${pgHead}
+    <div style="font-family:Arial,sans-serif;font-size:13.5px;line-height:1.75;color:#111">
+      ${content}
+    </div>
+    ${pgFoot}
+  </div>`;
+
+  const mouHTML=pw(`
+    <p style="${B}">THIS MEMORANDUM OF UNDERSTANDING (hereinafter referred to as the "MOU") is made and entered into on this ${mouDateStr(dateVal)} (the "Effective Date"),</p>
+    <p style="${B}">BY AND BETWEEN:</p>
+    <p style="${B}">1. ${spLegal}, a Company registered under the Companies Act, 2013, operating under the brand name ${spBrand}, represented by ${rep1} and ${rep2} (hereinafter referred to as the "Service Provider");</p>
+    <p style="${B}">AND</p>
+    <p style="${B}">2. <b>${clName}</b>, ${clType}, with its principal office located at ${clAddr} (hereinafter referred to as the "Client").</p>
+    <p style="${B}"><i>(Collectively referred to as the "Parties" and individually as a "Party").</i></p>
+    <p style="${H}">1. BACKGROUND &amp; PURPOSE</p>
+    <p style="${N}">WHEREAS, the Service Provider specializes in ${industry}; and WHEREAS, the Client operates an apparel brand on the Shopify platform and desires to evaluate the Service Provider's capabilities; NOW, THEREFORE, the Parties agree to enter into a ${days}-day Free Pilot (the "Pilot") to demonstrate the value of the Service Provider's execution services without financial obligation.</p>
+    <p style="${H}">2. TERM</p>
+    <p style="${N}">The term of this MOU shall be for a fixed period of ${days} (${days===7?'seven':days}) consecutive days, commencing on <b>${startStr}</b>.</p>
+    <p style="${H}">3. SCOPE OF WORK (THE "PILOT")</p>
+    <p style="${N}">The Service Provider agrees to deliver the following services during the Pilot Term at no cost to the Client:</p>
+    <p style="${H}">3.1. Maintenance &amp; Fixes:</p>
+    <p style="${N}">The Service Provider will address critical bugs, layout issues, and essential updates required to keep the store running smoothly.</p>
+  `)+pw(`
+    <p style="${H}">3.2. One Revenue-Focused Improvement:</p>
+    <p style="${N}">The Service Provider will execute one (1) specific "Revenue Play" or meaningful improvement designed to increase sales or conversion. This improvement will be selected based on the Client's priorities and may include, but is not limited to:</p>
+    <ul style="margin:0 0 14px 22px;font-family:Arial,sans-serif;font-size:13.5px;line-height:1.9;color:#111">${plays.map(p=>`<li>${p}</li>`).join('')}</ul>
+    <p style="${H}">3.3. Reporting:</p>
+    <p style="${N}">At the conclusion of the Pilot, the Service Provider will submit a report outlining the changes made and the work shipped on store performance.</p>
+    <p style="${H}">3.4. Exclusions:</p>
+    <p style="${N}">For the avoidance of doubt, the following are strictly excluded from this Pilot:</p>
+    <ul style="margin:0 0 14px 22px;font-family:Arial,sans-serif;font-size:13.5px;line-height:1.9;color:#111">
+      <li>Full website redesigns or new theme builds.</li>
+      <li>Custom app development or complex ERP integrations.</li>
+      <li>Performance marketing (ad management) or content creation.</li>
+      <li>Automations and Workflow optimisation</li>
+    </ul>
+    <p style="${H}">4. CLIENT OBLIGATIONS</p>
+    <p style="${N}">To enable the Service Provider to perform the Pilot services, the Client agrees to:</p>
+    <p style="${N}">4.1. Access: Provide timely administrative access to the Shopify Store, Google Analytics (GA4), and Meta Pixel (read-only) as required for diagnostics and implementation.</p>
+    <p style="${H}">4.2. Collaboration:</p>
+    <p style="${N}">Clearly communicate top priorities and respond to approval requests within 24 hours to ensure the ${days}-day timeline is met.</p>
+    <p style="${H}">5. FEES AND CONSIDERATION</p>
+    <p style="${H}">5.1. Free of Cost:</p>
+    <p style="${N}">The Services provided under this Pilot are free of charge. The Client is under no obligation to pay any fees for the work performed during these ${days} days.</p>
+  `)+pw(`
+    <p style="${H}">5.2. Consideration (Testimonial):</p>
+    <p style="${N}">In lieu of payment, if the Client is satisfied with the results of the Pilot, the Client agrees to provide a written or video testimonial regarding their experience with ${spBrand}.</p>
+    <p style="${H}">6. CONFIDENTIALITY</p>
+    <p style="${H}">6.1. Non-Disclosure:</p>
+    <p style="${N}">The Service Provider acknowledges that they will have access to the Client's sensitive business data (sales figures, traffic data, customer lists). The Service Provider agrees to keep all such information strictly confidential and shall not disclose it to any third parties without prior written consent.</p>
+    <p style="${H}">6.2. Use of Data:</p>
+    <p style="${N}">Data accessed will be used solely for the purpose of executing the Pilot and generating the performance report.</p>
+    <p style="${H}">7. INTELLECTUAL PROPERTY</p>
+    <p style="${H}">7.1. Client Ownership:</p>
+    <p style="${N}">Upon completion of the Pilot, the Client shall retain full ownership of all code, design elements, and content implemented on their Shopify store by the Service Provider.</p>
+    <p style="${H}">7.2. Provider IP:</p>
+    <p style="${N}">The Service Provider retains all rights to its proprietary methodologies, "Revenue Play" frameworks, and standard operating procedures used to deliver the service.</p>
+    <p style="${H}">8. NO OBLIGATION TO CONTINUE</p>
+    <p style="${H}">8.1. Non-Binding Future:</p>
+    <p style="${N}">Completing the Pilot creates no obligation for the Client to sign a monthly retainer or continue working with the Service Provider. The Client may walk away with the improvements at no cost.</p>
+    <p style="${H}">8.2. Proposal:</p>
+    <p style="${N}">Upon conclusion of the Pilot, the Service Provider may present a proposal for a monthly "Growth Partner" retainer (Lite, Core, or Plus tier) for the Client's consideration.</p>
+  `)+pw(`
+    <p style="${H}">9. LIMITATION OF LIABILITY</p>
+    <p style="${H}">9.1. Commercial Effort:</p>
+    <p style="${N}">The Service Provider shall use commercially reasonable efforts to perform the services. However, the Service Provider does not guarantee specific financial results (e.g., a specific increase in revenue) as external market factors also influence performance.</p>
+    <p style="${H}">9.2. Indemnity:</p>
+    <p style="${N}">The Service Provider shall not be liable for any temporary downtime or minor disruptions caused during the implementation of fixes, provided standard backup procedures were followed.</p>
+    <p style="${H}">10. SIGNATURES</p>
+    <p style="${B}">IN WITNESS WHEREOF, the Parties have executed this Memorandum of Understanding as of the date first above written.</p>
+    <ul style="margin:0 0 10px 22px;font-family:Arial,sans-serif;font-size:13.5px;font-weight:700;line-height:1.9;color:#111"><li>For ${spBrand}:</li></ul>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-bottom:24px;font-family:Arial,sans-serif;font-size:13.5px;font-weight:700;color:#111;line-height:2.1">
+      <div>Name: ${rep1}<br>Date: ________________<br>Sign: ________________</div>
+      <div>Name: ${rep2}<br>Date: ________________<br>Sign: ________________</div>
+    </div>
+    <ul style="margin:0 0 10px 22px;font-family:Arial,sans-serif;font-size:13.5px;font-weight:700;line-height:1.9;color:#111"><li>For Client:</li></ul>
+    <div style="font-family:Arial,sans-serif;font-size:13.5px;font-weight:700;color:#111;line-height:2.1">
+      Name: ____________________<br>Date: ________________<br>Sign: ________________
+    </div>
+  `);
+
+  // Open MOU preview modal
+  document.getElementById('mou-body').innerHTML=mouHTML;
+  document.getElementById('m-mou').classList.remove('hidden');
+}
+
+function downloadMOU(){
+  const style=document.createElement('style');
+  style.id='mou-print-style';
+  style.textContent=`
+    @media print {
+      body > *:not(#m-mou) { display:none!important; }
+      #m-mou { position:static!important;background:none!important;padding:0!important;display:block!important; }
+      #m-mou > div { position:static!important;max-width:none!important;height:auto!important;overflow:visible!important;box-shadow:none!important;border:none!important;border-radius:0!important; }
+      #mou-toolbar { display:none!important; }
+      #login-screen { display:none!important; }
+      @page { margin:18mm; size:A4; }
+    }`;
+  document.head.appendChild(style);
+  const clName=document.getElementById('mou-cl-name').value.trim()||'MOU';
+  document.title='MOU - '+clName;
+  window.print();
+  setTimeout(()=>{document.head.removeChild(style);document.title='NQ Financial Tracker';},2000);
+}
+
+// ─── PDF INVOICE GENERATOR ──────────────────────────────────────────────
+let pdfInvId=null;
+
+// Company settings (editable from Settings page — stored here for PDF)
+const CO={
+  name:'Techwave Solutions Pvt Ltd',
+  address:'Plot 42, MIDC Industrial Area',
+  city:'Pune',state:'Maharashtra',pin:'411028',
+  gstin:'27AABCT1332L1ZS',pan:'AABCT1332L',
+  email:'accounts@techwave.in',phone:'+91 20 4567 8900',
+  bankName:'HDFC Bank',bankAcc:'50200012345678',
+  bankIfsc:'HDFC0001234',bankAccType:'Current',
+  upi:'techwave@hdfcbank',
+  terms:'1. Payment is due within 7 days of the invoice date unless otherwise specified.\n2. Late payments may attract interest at 1.5% per month.\n3. All disputes are subject to Maharashtra jurisdiction.'
+};
+
+function renderSettingsLogo(){
+  ['nq','ai'].forEach(k=>{
+    const img=document.getElementById(`logo-${k}-img`);
+    const ph=document.getElementById(`logo-${k}-ph`);
+    const src=k==='nq'?DB.settings.logoNQ:DB.settings.logoAI;
+    if(src){if(img){img.src=src;img.style.display='block';}if(ph)ph.style.display='none';}
+    else{if(img){img.src='';img.style.display='none';}if(ph)ph.style.display='';}
+  });
+}
+function uploadLogo(input,key){
+  if(!input.files||!input.files[0])return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    if(key==='nq')DB.settings.logoNQ=ev.target.result;
+    else DB.settings.logoAI=ev.target.result;
+    const img=document.getElementById(`logo-${key}-img`);
+    const ph=document.getElementById(`logo-${key}-ph`);
+    if(img){img.src=ev.target.result;img.style.display='block';}
+    if(ph)ph.style.display='none';
+    persist();
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+function removeLogo(key){
+  if(key==='nq')DB.settings.logoNQ='';
+  else DB.settings.logoAI='';
+  const img=document.getElementById(`logo-${key}-img`);
+  const ph=document.getElementById(`logo-${key}-ph`);
+  if(img){img.src='';img.style.display='none';}
+  if(ph)ph.style.display='';
+  persist();
+}
+function getLogoBlock(forDark){
+  // Returns NQ logo (left side usage — payslip header, invoice header)
+  if(!DB.settings.logoNQ)return forDark?
+    `<div style="font-size:22px;font-weight:900;letter-spacing:2px;color:#fff">NQ</div><div style="font-size:11px;opacity:.6">Next Quarter · AI Evoked</div>`:
+    `<div style="font-size:18px;font-weight:900;letter-spacing:2px;color:#001931">NQ</div>`;
+  return`<img src="${DB.settings.logoNQ}" style="max-height:${forDark?'44':'36'}px;max-width:140px;object-fit:contain" alt="NQ Logo">`;
+}
+function getAILogoBlock(){
+  if(!DB.settings.logoAI)return`<div style="font-size:18px;font-weight:900;color:#111;font-family:'Arial Black',Arial,sans-serif">AI<br>Ev<span style="display:inline-block;position:relative">o<span style="position:absolute;left:0;right:0;top:50%;border-top:2.5px solid #111;transform:translateY(-50%)"></span></span>ked</div>`;
+  return`<img src="${DB.settings.logoAI}" style="max-height:40px;max-width:120px;object-fit:contain" alt="AI Evoked Logo">`;
+}
+
+function openPDF(id){
+  pdfInvId=id;
+  const i=DB.invoices.find(x=>x.id===id);
+  const cl=DB.clients.find(c=>c.id===i.clientId);
+  const ig=i.igst>0;
+
+  // Helper for editable span
+  const e=(val,id)=>`<span contenteditable="true" class="editable" id="pe-${id}" onblur="pdfFieldChange()" spellcheck="false">${val||''}</span>`;
+
+  // Build line items rows
+  let liRows=i.lines.map((l,idx)=>`
+    <tr id="pli-${idx}">
+      <td style="text-align:center">${idx+1}</td>
+      <td><span contenteditable="true" class="editable" id="pe-li-desc-${idx}" onblur="pdfRecalc()">${l.desc}</span></td>
+      <td style="text-align:center"><span contenteditable="true" class="editable" id="pe-li-hsn-${idx}">${l.hsn||'998313'}</span></td>
+      <td style="text-align:center"><span contenteditable="true" class="editable" id="pe-li-qty-${idx}" onblur="pdfRecalc()">${l.qty}</span></td>
+      <td style="text-align:right" class="num"><span contenteditable="true" class="editable" id="pe-li-rate-${idx}" onblur="pdfRecalc()">₹${(l.rate/100).toLocaleString('en-IN',{minimumFractionDigits:2})}</span></td>
+      <td style="text-align:right" class="num" id="pe-li-amt-${idx}">₹${(l.qty*l.rate/100).toLocaleString('en-IN',{minimumFractionDigits:2})}</td>
+      <td style="text-align:right" class="num"><span contenteditable="true" class="editable" id="pe-li-tax-${idx}" onblur="pdfRecalc()">${l.tax}%</span><br><span style="font-size:10px;color:#666">(${l.tax}%)</span></td>
+      <td style="text-align:right;font-weight:700" class="num" id="pe-li-tot-${idx}">₹${(l.total/100).toLocaleString('en-IN',{minimumFractionDigits:2})}</td>
+      <td class="pdf-no-print" style="padding:0 4px"><button onclick="removePDFLine(${idx})" style="color:#DC2626;border:none;background:none;cursor:pointer;font-size:14px;padding:2px 6px">✕</button></td>
+    </tr>`).join('');
+
+  const html=`
+<div style="font-family:'Inter',system-ui,sans-serif;max-width:800px;margin:0 auto;color:#1a1a1a;position:relative">
+  <!-- Top accent bar -->
+  <div style="height:5px;background:linear-gradient(90deg,#6B21A8,#A855F7);border-radius:3px 3px 0 0;margin-bottom:0"></div>
+  <div style="border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;padding:28px 32px">
+
+    <!-- Header row -->
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px">
+      <div>
+        <div style="font-size:28px;font-weight:800;color:#6B21A8;letter-spacing:-0.5px">TAX INVOICE</div>
+        <div style="font-size:14px;color:#555;margin-top:3px">${e(i.num,'inv-num')}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        ${getLogoBlock(false)}
+        ${DB.settings.logoAI?`<img src="${DB.settings.logoAI}" style="max-height:36px;max-width:100px;object-fit:contain" alt="AI Evoked">`:`<div style="font-size:11px;font-weight:700;color:#6B21A8;text-align:right;line-height:1.3">AI<br>Evoked</div>`}
+      </div>
+    </div>
+
+    <!-- Dates -->
+    <div style="display:flex;gap:24px;margin-bottom:20px;font-size:13.5px">
+      <span>Invoice Date: <b>${e(new Date(i.date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}),'inv-date')}</b></span>
+      <span>Due Date: <b>${e(new Date(i.due).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}),'inv-due')}</b></span>
+    </div>
+
+    <!-- Billed By / To -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px">
+      <div style="background:#F5F3FF;border:1px solid #E9D5FF;border-radius:8px;padding:14px 16px">
+        <div style="font-size:11px;font-weight:700;color:#6B21A8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Billed By</div>
+        <div style="font-weight:700;font-size:14px;margin-bottom:4px">${e(CO.name,'by-name')}</div>
+        <div style="font-size:12.5px;color:#444;line-height:1.6">
+          <div>Address: ${e(CO.address+', '+CO.city+', '+CO.state+' - '+CO.pin,'by-addr')}</div>
+          <div>GSTIN: <b>${e(CO.gstin,'by-gstin')}</b></div>
+          <div>PAN: ${e(CO.pan,'by-pan')}</div>
+          <div>Email: ${e(CO.email,'by-email')}</div>
+          <div>Phone: ${e(CO.phone,'by-phone')}</div>
+        </div>
+      </div>
+      <div style="background:#F5F3FF;border:1px solid #E9D5FF;border-radius:8px;padding:14px 16px">
+        <div style="font-size:11px;font-weight:700;color:#6B21A8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Billed To</div>
+        <div style="font-weight:700;font-size:14px;margin-bottom:4px">${e(cl.name,'to-name')}</div>
+        <div style="font-size:12.5px;color:#444;line-height:1.6">
+          <div>Address: ${e((cl.billingAddress||'')+', '+(cl.city||'')+', '+(cl.state||''),'to-addr')}</div>
+          ${cl.gstin?`<div>GSTIN: <b>${e(cl.gstin,'to-gstin')}</b></div>`:''}
+          ${cl.email?`<div>Email: ${e(cl.email,'to-email')}</div>`:''}
+          ${cl.phone?`<div>Phone: ${e(cl.phone,'to-phone')}</div>`:''}
+        </div>
+      </div>
+    </div>
+
+    <!-- Supply info -->
+    <div style="font-size:13px;margin-bottom:16px;color:#444">
+      <b>Country of Supply:</b> ${e('India','supply-country')} &nbsp;&nbsp;
+      <b>Place of Supply:</b> ${e(cl.state+(cl.state?'':'')||'Maharashtra','supply-place')}
+    </div>
+
+    <!-- Line Items Table -->
+    <table id="pdf-line-table" style="width:100%;border-collapse:collapse;margin-bottom:18px;font-size:13px">
+      <thead>
+        <tr style="background:#6B21A8;color:#fff">
+          <th style="padding:10px 8px;text-align:center;width:32px">#</th>
+          <th style="padding:10px 8px;text-align:left">Item</th>
+          <th style="padding:10px 8px;text-align:center">SAC/HSN</th>
+          <th style="padding:10px 8px;text-align:center">Qty</th>
+          <th style="padding:10px 8px;text-align:right">Rate</th>
+          <th style="padding:10px 8px;text-align:right">Amount</th>
+          <th style="padding:10px 8px;text-align:right">${ig?'IGST':'CGST+SGST'}</th>
+          <th style="padding:10px 8px;text-align:right">Total</th>
+          <th class="pdf-no-print" style="padding:10px 4px;width:30px"></th>
+        </tr>
+      </thead>
+      <tbody id="pdf-li-body" style="border:1px solid #e5e7eb">
+        ${liRows}
+      </tbody>
+    </table>
+    <div class="pdf-no-print" style="margin-bottom:16px">
+      <button onclick="addPDFLine()" style="font-size:12px;padding:5px 12px;border:1px dashed #6B21A8;border-radius:6px;background:none;color:#6B21A8;cursor:pointer">+ Add Line Item</button>
+    </div>
+
+    <!-- Totals + Amount in Words -->
+    <div style="display:grid;grid-template-columns:1fr auto;gap:16px;margin-bottom:20px;align-items:start">
+      <div>
+        <div style="font-size:11.5px;font-weight:600;color:#555;margin-bottom:4px">Amount in Words:</div>
+        <div style="font-style:italic;color:#444;font-size:13px" id="pdf-words"></div>
+      </div>
+      <div style="min-width:220px">
+        <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px;color:#555;border-bottom:1px solid #e5e7eb"><span>Subtotal</span><span class="num" id="pdf-sub"></span></div>
+        ${ig
+          ? `<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px;color:#555;border-bottom:1px solid #e5e7eb"><span>IGST</span><span class="num" id="pdf-tax1"></span></div>`
+          : `<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px;color:#555;border-bottom:1px solid #e5e7eb"><span>CGST</span><span class="num" id="pdf-tax1"></span></div>
+             <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px;color:#555;border-bottom:1px solid #e5e7eb"><span>SGST</span><span class="num" id="pdf-tax2"></span></div>`}
+        <div style="display:flex;justify-content:space-between;padding:8px 0 4px;font-size:15px;font-weight:800;color:#1a1a1a;border-top:2px solid #1a1a1a;margin-top:4px"><span>Grand Total</span><span class="num" id="pdf-grand"></span></div>
+      </div>
+    </div>
+
+    <!-- Bank Details -->
+    <div style="border:1px solid #e5e7eb;border-radius:8px;padding:14px 16px;margin-bottom:18px">
+      <div style="font-size:11.5px;font-weight:700;color:#6B21A8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">Bank Details</div>
+      <div style="display:grid;grid-template-columns:140px 1fr;gap:5px 0;font-size:13px">
+        <b>Bank</b><span>${e(CO.bankName,'bank-name')}</span>
+        <b>Account Name</b><span>${e(CO.name,'bank-acname')}</span>
+        <b>Account Number</b><span>${e(CO.bankAcc,'bank-acc')}</span>
+        <b>IFSC</b><span>${e(CO.bankIfsc,'bank-ifsc')}</span>
+        <b>Account Type</b><span>${e(CO.bankAccType,'bank-type')}</span>
+        <b>UPI ID</b><span>${e(CO.upi,'bank-upi')}</span>
+      </div>
+    </div>
+
+    <!-- Terms -->
+    <div style="margin-bottom:28px">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Terms &amp; Conditions</div>
+      <div contenteditable="true" class="editable" id="pe-terms" style="font-size:12px;color:#555;line-height:1.7;white-space:pre-line">${CO.terms}</div>
+    </div>
+
+    <!-- Signature row -->
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;padding-top:12px;border-top:1px solid #e5e7eb">
+      <div style="font-size:12.5px;color:#777">Receiver's Signature</div>
+      <div style="text-align:right;font-size:13px;font-weight:600">For ${e(CO.name,'sig-name')}</div>
+    </div>
+
+  </div>
+</div>`;
+
+  document.getElementById('pdf-body').innerHTML=html;
+  pdfRecalc();
+  document.getElementById('m-pdf').classList.remove('hidden');
+}
+
+function pdfRecalc(){
+  const rows=document.querySelectorAll('#pdf-li-body tr');
+  let sub=0,tax=0;
+  const ig=document.getElementById('pdf-tax2')===null;
+  rows.forEach((row,idx)=>{
+    const desc=row.querySelector(`[id^="pe-li-desc"]`);
+    const rateEl=row.querySelector(`[id^="pe-li-rate"]`);
+    const qtyEl=row.querySelector(`[id^="pe-li-qty"]`);
+    const taxEl=row.querySelector(`[id^="pe-li-tax"]`);
+    if(!rateEl||!qtyEl)return;
+    const rateStr=(rateEl.textContent||'0').replace(/[₹,]/g,'');
+    const rate=parseFloat(rateStr)||0;
+    const qty=parseFloat(qtyEl.textContent)||0;
+    const t=parseFloat((taxEl?.textContent||'0').replace('%',''))||0;
+    const amt=qty*rate;
+    const taxAmt=amt*t/100;
+    const amtEl=row.querySelector(`[id^="pe-li-amt"]`);
+    const totEl=row.querySelector(`[id^="pe-li-tot"]`);
+    if(amtEl)amtEl.textContent='₹'+amt.toLocaleString('en-IN',{minimumFractionDigits:2});
+    if(totEl)totEl.textContent='₹'+(amt+taxAmt).toLocaleString('en-IN',{minimumFractionDigits:2});
+    sub+=amt*100;tax+=taxAmt*100;
+  });
+  const grand=sub+tax;
+  const t1El=document.getElementById('pdf-tax1');
+  const t2El=document.getElementById('pdf-tax2');
+  if(t1El)t1El.textContent='₹'+(( (t2El?tax/2:tax)/100).toLocaleString('en-IN',{minimumFractionDigits:2}));
+  if(t2El)t2El.textContent='₹'+((tax/2/100).toLocaleString('en-IN',{minimumFractionDigits:2}));
+  const subEl=document.getElementById('pdf-sub');
+  const grEl=document.getElementById('pdf-grand');
+  if(subEl)subEl.textContent='₹'+(sub/100).toLocaleString('en-IN',{minimumFractionDigits:2});
+  if(grEl)grEl.textContent='₹'+(grand/100).toLocaleString('en-IN',{minimumFractionDigits:2});
+  const wEl=document.getElementById('pdf-words');
+  if(wEl)wEl.textContent='Indian Rupees '+aw(Math.round(grand));
+}
+
+function pdfFieldChange(){pdfRecalc();}
+
+function addPDFLine(){
+  const tbody=document.getElementById('pdf-li-body');
+  const idx=tbody.children.length;
+  const tr=document.createElement('tr');tr.id='pli-'+idx;
+  tr.innerHTML=`
+    <td style="text-align:center">${idx+1}</td>
+    <td><span contenteditable="true" class="editable" id="pe-li-desc-${idx}" onblur="pdfRecalc()">New Service</span></td>
+    <td style="text-align:center"><span contenteditable="true" class="editable" id="pe-li-hsn-${idx}">998313</span></td>
+    <td style="text-align:center"><span contenteditable="true" class="editable" id="pe-li-qty-${idx}" onblur="pdfRecalc()">1</span></td>
+    <td style="text-align:right" class="num"><span contenteditable="true" class="editable" id="pe-li-rate-${idx}" onblur="pdfRecalc()">₹0.00</span></td>
+    <td style="text-align:right" class="num" id="pe-li-amt-${idx}">₹0.00</td>
+    <td style="text-align:right" class="num"><span contenteditable="true" class="editable" id="pe-li-tax-${idx}" onblur="pdfRecalc()">18%</span></td>
+    <td style="text-align:right;font-weight:700" class="num" id="pe-li-tot-${idx}">₹0.00</td>
+    <td class="pdf-no-print" style="padding:0 4px"><button onclick="this.closest('tr').remove();pdfRecalc()" style="color:#DC2626;border:none;background:none;cursor:pointer;font-size:14px;padding:2px 6px">✕</button></td>
+  `;
+  tbody.appendChild(tr);
+}
+
+function removePDFLine(idx){
+  const tr=document.getElementById('pli-'+idx);if(tr)tr.remove();
+  pdfRecalc();
+  // Renumber
+  document.querySelectorAll('#pdf-li-body tr').forEach((r,i)=>{if(r.cells[0])r.cells[0].textContent=i+1;});
+}
+
+function downloadPDF(){
+  const inv=DB.invoices.find(x=>x.id===pdfInvId);
+  const num=(inv?.num||'invoice').replace(/\//g,'-');
+  // Print to PDF
+  const style=document.createElement('style');
+  style.id='pdf-print-style';
+  style.textContent=`
+    @media print {
+      body > *:not(#m-pdf) { display:none!important; }
+      #m-pdf { position:static!important;background:none!important;padding:0!important;display:block!important;z-index:9999; }
+      #m-pdf > div { position:static!important;max-width:none!important;height:auto!important;overflow:visible!important;box-shadow:none!important;border:none!important;border-radius:0!important; }
+      #pdf-toolbar { display:none!important; }
+      .pdf-no-print { display:none!important; }
+      .editable { outline:none!important;border-bottom:none!important; }
+      @page { margin:15mm; size:A4; }
+    }`;
+  document.head.appendChild(style);
+  document.title=num;
+  window.print();
+  setTimeout(()=>{document.head.removeChild(style);document.title='NQ Financial Tracker';},2000);
+}
+
+// ─── MODALS ─────────────────────────────────────────────────────────────
+function openM(id){
+  document.getElementById(id).classList.remove('hidden');
+  if(id==='m-invoice'){
+    const n=iso(new Date());document.getElementById('i-dt').value=n;document.getElementById('i-dd').value=iso(new Date(Date.now()+30*86400000));
+    const sel=document.getElementById('i-cl');sel.innerHTML='<option value="">Select client…</option>';
+    DB.clients.forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.name;sel.appendChild(o);});
+    calcTot();
+  }
+  if(id==='m-expense')document.getElementById('e-d').value=iso(new Date());
+  if(id==='m-pay')document.getElementById('p-d').value=iso(new Date());
+  if(id==='m-run-pr')document.getElementById('rpr-m').value=new Date().getMonth()+1;
+}
+function closeM(id){document.getElementById(id).classList.add('hidden');}
+
+// ─── INIT ────────────────────────────────────────────────────────────────
+renderDash();
+</script>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen" style="position:fixed;inset:0;z-index:99999;background:linear-gradient(135deg,#0E1726 0%,#1a2a4a 100%);display:flex;align-items:center;justify-content:center;font-family:'Inter',system-ui,sans-serif">
+  <div style="background:#fff;border-radius:16px;padding:40px 36px;width:340px;box-shadow:0 24px 64px rgba(0,0,0,.4)">
+    <div style="text-align:center;margin-bottom:28px">
+      <div style="width:48px;height:48px;background:#2563EB;border-radius:12px;margin:0 auto 12px;display:flex;align-items:center;justify-content:center">
+        <svg viewBox="0 0 24 24" fill="#fff" style="width:26px;height:26px"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+      </div>
+      <div style="font-size:22px;font-weight:800;color:#001931;letter-spacing:1px">NQ Financial Tracker</div>
+      <div style="font-size:13px;color:#64748B;margin-top:4px">Next Quarter · AI Evoked</div>
+    </div>
+    <div id="login-err" style="display:none;background:#FEE2E2;color:#DC2626;padding:8px 12px;border-radius:8px;font-size:13px;margin-bottom:14px;text-align:center"></div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#475569;display:block;margin-bottom:5px">Username</label>
+        <input id="l-user" type="text" placeholder="Enter username" autocomplete="username"
+          style="width:100%;padding:10px 12px;border:1.5px solid #E2E8F0;border-radius:8px;font-size:14px;outline:none;transition:border .15s"
+          onfocus="this.style.borderColor='#2563EB'" onblur="this.style.borderColor='#E2E8F0'"
+          onkeydown="if(event.key==='Enter')document.getElementById('l-pass').focus()">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#475569;display:block;margin-bottom:5px">Password</label>
+        <input id="l-pass" type="password" placeholder="Enter password" autocomplete="current-password"
+          style="width:100%;padding:10px 12px;border:1.5px solid #E2E8F0;border-radius:8px;font-size:14px;outline:none;transition:border .15s"
+          onfocus="this.style.borderColor='#2563EB'" onblur="this.style.borderColor='#E2E8F0'"
+          onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <button onclick="doLogin()" style="background:#2563EB;color:#fff;border:none;padding:12px;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px;transition:background .15s" onmouseover="this.style.background='#1D4ED8'" onmouseout="this.style.background='#2563EB'">Sign In</button>
+    </div>
+    <div style="text-align:center;margin-top:20px;font-size:12px;color:#94A3B8">Secured · For internal use only</div>
+  </div>
+</div>
+
+<!-- Edit Payment Modal -->
+<div class="ov hidden" id="m-edit-pay" onclick="if(event.target===this)closeM('m-edit-pay')">
+  <div class="mo">
+    <div class="mh"><span class="mt">Edit Payment</span><button class="mc" onclick="closeM('m-edit-pay')">✕</button></div>
+    <div class="mb" style="display:flex;flex-direction:column;gap:14px">
+      <input type="hidden" id="ep-id">
+      <div class="fr">
+        <div class="fg"><label class="lbl">Date</label><input class="inp" type="date" id="ep-date"></div>
+        <div class="fg"><label class="lbl">Amount (₹)</label><input class="inp" type="number" id="ep-amount" step="0.01"></div>
+      </div>
+      <div class="fr">
+        <div class="fg"><label class="lbl">Mode</label><select class="inp" id="ep-mode"><option>UPI</option><option>BANK</option><option>CASH</option><option>CHEQUE</option><option>NEFT</option><option>RTGS</option></select></div>
+        <div class="fg"><label class="lbl">Reference / UTR</label><input class="inp" id="ep-ref" placeholder="UTR / transaction ref"></div>
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-p" onclick="savePayment()">Save</button>
+      <button class="btn btn-o" onclick="closeM('m-edit-pay')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Payslip Modal -->
+<div class="ov hidden" id="m-slip" onclick="if(event.target===this)closeM('m-slip')">
+  <div class="mo" style="max-width:720px">
+    <div class="mh"><span class="mt">Payslip</span><button class="mc" onclick="closeM('m-slip')">✕</button></div>
+    <div class="mb" id="slip-body"></div>
+    <div class="mf"><button class="btn btn-p" onclick="window.print()">🖨 Print Payslip</button><button class="btn btn-o" onclick="closeM('m-slip')">Close</button></div>
+  </div>
+</div>
+
+<!-- Add / Edit Deal Modal -->
+<div class="ov hidden" id="m-deal" onclick="if(event.target===this)closeM('m-deal')">
+  <div class="mo">
+    <div class="mh"><span class="mt" id="deal-modal-title">Add Deal</span><button class="mc" onclick="closeM('m-deal')">✕</button></div>
+    <div class="mb" style="display:flex;flex-direction:column;gap:14px">
+      <input type="hidden" id="deal-id">
+      <div class="fr">
+        <div class="fg"><label class="lbl">Client Name *</label><input class="inp" id="deal-client" placeholder="e.g. Bonsoir"></div>
+        <div class="fg"><label class="lbl">Tier</label><select class="inp" id="deal-tier"><option>Lite</option><option>Core</option><option>Plus</option><option>Custom</option></select></div>
+      </div>
+      <div class="fr">
+        <div class="fg"><label class="lbl">MRR (₹/month) *</label><input class="inp" type="number" id="deal-mrr" placeholder="e.g. 25000" min="0"></div>
+        <div class="fg"><label class="lbl">Status</label><select class="inp" id="deal-status"><option value="active">Active</option><option value="upcoming">Upcoming</option><option value="churned">Churned</option></select></div>
+      </div>
+      <div class="fr">
+        <div class="fg"><label class="lbl">Start Date *</label><input class="inp" type="date" id="deal-start"></div>
+        <div class="fg"><label class="lbl">End Date (blank = ongoing)</label><input class="inp" type="date" id="deal-end"></div>
+      </div>
+      <div class="fg"><label class="lbl">Notes</label><input class="inp" id="deal-notes" placeholder="e.g. 3-month contract, auto-renewal"></div>
+    </div>
+    <div class="mf">
+      <button class="btn btn-p" onclick="saveDeal()">Save Deal</button>
+      <button class="btn btn-o" onclick="closeM('m-deal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- MOU Preview Modal -->
+<div class="hidden" id="m-mou" style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9998;overflow-y:auto;padding:24px 16px">
+  <div style="max-width:860px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+    <div id="mou-toolbar" style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:#0E1726;color:#fff;gap:12px">
+      <div style="font-weight:700;font-size:14px">📋 MOU Preview</div>
+      <div style="display:flex;gap:8px">
+        <button onclick="downloadMOU()" style="background:#2563EB;color:#fff;border:none;padding:8px 18px;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px">⬇ Download PDF</button>
+        <button onclick="document.getElementById('m-mou').classList.add('hidden')" style="background:rgba(255,255,255,.15);color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:13px">✕ Close</button>
+      </div>
+    </div>
+    <div id="mou-body" style="background:#fff;color:#1a1a1a;padding:32px 40px;min-height:400px"></div>
+  </div>
+</div>
+
+<!-- PDF Invoice Generator Modal -->
+<div class="hidden" id="m-pdf" style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;overflow-y:auto;padding:24px 16px">
+  <div style="max-width:860px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+    <!-- Toolbar -->
+    <div id="pdf-toolbar" style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:#1e1e2e;color:#fff;gap:12px">
+      <div style="font-weight:700;font-size:14px;letter-spacing:.02em">📄 Invoice Preview &amp; Editor — click any field to edit</div>
+      <div style="display:flex;gap:8px">
+        <button onclick="downloadPDF()" style="background:#6B21A8;color:#fff;border:none;padding:8px 18px;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px">⬇ Download PDF</button>
+        <button onclick="document.getElementById('m-pdf').classList.add('hidden')" style="background:rgba(255,255,255,.15);color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:13px">✕ Close</button>
+      </div>
+    </div>
+    <!-- Invoice body (rendered by openPDF) -->
+    <div id="pdf-body" style="background:#fff;color:#1a1a1a;padding:24px;min-height:400px"></div>
+  </div>
+</div>
+<style>
+.editable{outline:none;border-bottom:1px dashed #A855F7;cursor:text;min-width:20px;display:inline-block}
+.editable:focus{background:#F5F3FF;border-bottom:2px solid #6B21A8;border-radius:2px}
+.num{font-variant-numeric:tabular-nums}
+#pdf-li-body tr{border-bottom:1px solid #e5e7eb}
+#pdf-li-body td{padding:8px}
+</style>
+</body></html>
