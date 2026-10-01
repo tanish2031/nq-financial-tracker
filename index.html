@@ -377,6 +377,13 @@ Homepage Cleanup
 Offer Visibility Optimisation (COD/Shipping clarity)</textarea>
         <button class="btn btn-p" onclick="genMOU()" style="align-self:flex-start;padding:12px 28px;font-size:15px">📄 Preview &amp; Download MOU</button>
       </div>
+      <!-- MOU Tracker -->
+      <div class="card" style="margin-top:28px">
+        <div class="ch"><span class="ct">MOU Tracker</span><span style="font-size:12px;color:var(--text2)">Track sent pilot agreements</span></div>
+        <div class="cb tw" id="mou-tracker-wrap">
+          <table><thead><tr><th>Client</th><th>Date Generated</th><th>Status</th><th></th></tr></thead><tbody id="mou-tracker-body"></tbody></table>
+        </div>
+      </div>
     </div>
 
     <!-- SETTINGS -->
@@ -595,6 +602,7 @@ const DB={
   {id:'e5',name:'Arjun Nair',desig:'DevOps Engineer',basic:10000000,hra:4000000,allow:1200000,pf:12},
  ],
  payslips:[],
+ mous:[],
  invCtr:11,
 settings:{logoNQ:'',logoAI:'',companyName:'Next Quarter · AI Evoked'},
 };
@@ -711,9 +719,9 @@ function renderSec(s){
   if(s==='settings')renderSettingsLogo();
   if(s==='projections')renderProjections();
   if(s==='mou'){
-    // pre-fill today's date
     const d=document.getElementById('mou-date');
     if(d&&!d.value)d.value=new Date().toISOString().slice(0,10);
+    renderMOUTracker();
   }
 }
 function gotoInv(status){
@@ -1645,7 +1653,22 @@ function printLedger(){
   </div>
   </body></html>`);
   win.document.close();
-  setTimeout(()=>{try{win.focus();win.print();}catch(e){}},600);
+  // After rendering in hidden iframe, capture with html2canvas + jsPDF
+  setTimeout(()=>{
+    const body=pf.contentDocument.body;
+    loadPDFLibs(function(){
+      html2canvas(body,{scale:2,useCORS:true,backgroundColor:'#ffffff',windowWidth:794}).then(function(canvas){
+        pf.remove();
+        const{jsPDF}=window.jspdf;
+        const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+        const pw=pdf.internal.pageSize.getWidth(),ph=pdf.internal.pageSize.getHeight();
+        const ih=(canvas.height*pw)/canvas.width;
+        let y=0,rem=ih;
+        while(rem>0){if(y>0)pdf.addPage();pdf.addImage(canvas.toDataURL('image/png'),'PNG',0,y>0?-y:0,pw,ih);y+=ph;rem-=ph;}
+        pdf.save('Ledger-'+client.name.replace(/\s+/g,'-')+'.pdf');
+      }).catch(function(e){pf.remove();toast('PDF failed: '+e.message,'error');});
+    });
+  },800);
 }
 
 function renderProjections(){
@@ -1910,38 +1933,32 @@ function genMOU(){
 function downloadMOU(){
   const clName=document.getElementById('mou-cl-name').value.trim()||'MOU';
   const bodyContent=document.getElementById('mou-body').innerHTML;
-  // Build a hidden render container with exact A4 width so html2canvas captures proper layout
+  // Record this MOU in tracker
+  const mouRecord={id:'m'+Date.now(),client:clName,date:new Date().toISOString().slice(0,10),status:'Draft'};
+  DB.mous.push(mouRecord);
+  persist();
+  renderMOUTracker();
+  // Render off-screen at A4 width with full padding for clean capture
   let rc=document.getElementById('_mou_render');
   if(rc)rc.remove();
   rc=document.createElement('div');rc.id='_mou_render';
-  rc.style.cssText='position:fixed;left:-9999px;top:0;width:794px;background:#fff;font-family:Arial,sans-serif;font-size:13px;color:#000;padding:40px;box-sizing:border-box;z-index:-1';
+  rc.style.cssText='position:fixed;left:-9999px;top:0;width:794px;background:#fff;font-family:Arial,sans-serif;font-size:13px;color:#000;padding:56px 60px;box-sizing:border-box;z-index:-1;line-height:1.6';
   rc.innerHTML=bodyContent;
+  // Remove glassmorphism styles from the render clone
+  rc.querySelectorAll('*').forEach(el=>{el.style.backdropFilter='';el.style.webkitBackdropFilter='';});
   document.body.appendChild(rc);
-  // Dynamically load html2canvas + jsPDF then render
-  function loadScript(src,cb){
-    if(document.querySelector('script[src="'+src+'"]')){cb();return;}
-    const s=document.createElement('script');s.src=src;s.onload=cb;document.head.appendChild(s);
-  }
-  loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',function(){
-    loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',function(){
-      html2canvas(rc,{scale:2,useCORS:true,backgroundColor:'#ffffff'}).then(function(canvas){
-        rc.remove();
-        const {jsPDF}=window.jspdf;
-        const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-        const pageW=pdf.internal.pageSize.getWidth();
-        const pageH=pdf.internal.pageSize.getHeight();
-        const imgW=pageW;
-        const imgH=(canvas.height*imgW)/canvas.width;
-        let y=0;
-        let remaining=imgH;
-        while(remaining>0){
-          if(y>0)pdf.addPage();
-          pdf.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',0,y>0?-(y):0,imgW,imgH);
-          y+=pageH;remaining-=pageH;
-        }
-        pdf.save('MOU-'+clName+'.pdf');
-      }).catch(function(e){rc.remove();toast('PDF generation failed: '+e.message,'error');});
-    });
+  loadPDFLibs(function(){
+    html2canvas(rc,{scale:2.5,useCORS:true,backgroundColor:'#ffffff',windowWidth:794}).then(function(canvas){
+      rc.remove();
+      const{jsPDF}=window.jspdf;
+      const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+      const pw=pdf.internal.pageSize.getWidth(),ph=pdf.internal.pageSize.getHeight();
+      const ih=(canvas.height*pw)/canvas.width;
+      let y=0,rem=ih;
+      while(rem>0){if(y>0)pdf.addPage();pdf.addImage(canvas.toDataURL('image/png'),'PNG',0,y>0?-y:0,pw,ih);y+=ph;rem-=ph;}
+      pdf.save('MOU-'+clName+'.pdf');
+      toast('MOU saved & tracked for '+clName,'success');
+    }).catch(function(e){rc.remove();toast('PDF failed: '+e.message,'error');});
   });
 }
 
@@ -1962,8 +1979,68 @@ const CO={
 };
 
 function saveSettings(){
-  // Settings inputs have no ids yet — just show success toast
   toast('Settings saved successfully.','success');
+}
+
+function renderMOUTracker(){
+  const tbody=document.getElementById('mou-tracker-body');
+  if(!tbody)return;
+  const statColors={Draft:'var(--amber)',Sent:'var(--blue-t)',Signed:'var(--green)',Lost:'var(--red)'};
+  const statBg={Draft:'var(--amber-bg)',Sent:'var(--blue-bg)',Signed:'var(--green-bg)',Lost:'var(--red-bg)'};
+  if(!DB.mous||!DB.mous.length){tbody.innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:24px">No MOUs generated yet</td></tr>';return;}
+  tbody.innerHTML=[...DB.mous].reverse().map(m=>`
+    <tr>
+      <td style="font-weight:600">${m.client}</td>
+      <td>${fmtD(parseLocalDate(m.date))}</td>
+      <td>
+        <select onchange="updateMOUStatus('${m.id}',this.value)" style="padding:4px 8px;border-radius:5px;border:1px solid var(--glass-border);background:${statBg[m.status]||'var(--surface2)'};color:${statColors[m.status]||'var(--text)'};font-size:12px;font-weight:600;cursor:pointer">
+          ${['Draft','Sent','Signed','Lost'].map(s=>`<option value="${s}"${m.status===s?' selected':''}>${s}</option>`).join('')}
+        </select>
+      </td>
+      <td><button onclick="deleteMOU('${m.id}')" style="font-size:11px;padding:3px 8px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text2);cursor:pointer">Remove</button></td>
+    </tr>`).join('');
+}
+function updateMOUStatus(id,status){
+  const m=DB.mous.find(x=>x.id===id);
+  if(m){m.status=status;persist();renderMOUTracker();}
+}
+function deleteMOU(id){
+  DB.mous=DB.mous.filter(x=>x.id!==id);
+  persist();renderMOUTracker();
+}
+
+// Shared PDF library loader
+function loadPDFLibs(cb){
+  function loadScript(src,next){
+    if(document.querySelector('script[src="'+src+'"]')){next();return;}
+    const s=document.createElement('script');s.src=src;s.onload=next;document.head.appendChild(s);
+  }
+  loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',function(){
+    loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',cb);
+  });
+}
+
+// Render HTML string to PDF and auto-download
+function htmlStringToPDF(htmlContent,filename,width){
+  width=width||794;
+  let rc=document.getElementById('_pdf_render');
+  if(rc)rc.remove();
+  rc=document.createElement('div');rc.id='_pdf_render';
+  rc.style.cssText='position:fixed;left:-9999px;top:0;width:'+width+'px;background:#fff;font-family:Arial,sans-serif;font-size:13px;color:#000;padding:0;box-sizing:border-box;z-index:-1';
+  rc.innerHTML=htmlContent;
+  document.body.appendChild(rc);
+  loadPDFLibs(function(){
+    html2canvas(rc,{scale:2,useCORS:true,backgroundColor:'#ffffff',windowWidth:width}).then(function(canvas){
+      rc.remove();
+      const{jsPDF}=window.jspdf;
+      const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+      const pw=pdf.internal.pageSize.getWidth(),ph=pdf.internal.pageSize.getHeight();
+      const ih=(canvas.height*pw)/canvas.width;
+      let y=0,rem=ih;
+      while(rem>0){if(y>0)pdf.addPage();pdf.addImage(canvas.toDataURL('image/png'),'PNG',0,y>0?-y:0,pw,ih);y+=ph;rem-=ph;}
+      pdf.save(filename);
+    }).catch(function(e){rc.remove();toast('PDF failed: '+e.message,'error');});
+  });
 }
 function renderSettingsLogo(){
   ['nq','ai'].forEach(k=>{
@@ -2223,23 +2300,28 @@ function removePDFLine(idx){
 function downloadPDF(){
   const inv=DB.invoices.find(x=>x.id===pdfInvId);
   const num=(inv?.num||'invoice').replace(/\//g,'-');
-  // Print to PDF
-  const style=document.createElement('style');
-  style.id='pdf-print-style';
-  style.textContent=`
-    @media print {
-      body > *:not(#m-pdf) { display:none!important; }
-      #m-pdf { position:static!important;background:none!important;padding:0!important;display:block!important;z-index:9999; }
-      #m-pdf > div { position:static!important;max-width:none!important;height:auto!important;overflow:visible!important;box-shadow:none!important;border:none!important;border-radius:0!important; }
-      #pdf-toolbar { display:none!important; }
-      .pdf-no-print { display:none!important; }
-      .editable { outline:none!important;border-bottom:none!important; }
-      @page { margin:15mm; size:A4; }
-    }`;
-  document.head.appendChild(style);
-  document.title=num;
-  window.print();
-  setTimeout(()=>{document.head.removeChild(style);document.title='NQ Financial Tracker';},2000);
+  // Find the inner invoice content div (inside the modal overlay)
+  const modal=document.getElementById('m-pdf');
+  if(!modal)return;
+  const inner=modal.querySelector(':scope > div');
+  if(!inner)return;
+  // Temporarily hide toolbar for clean capture
+  const toolbar=document.getElementById('pdf-toolbar');
+  if(toolbar)toolbar.style.display='none';
+  // Remove editable outlines
+  modal.querySelectorAll('.editable').forEach(el=>el.style.outline='none');
+  loadPDFLibs(function(){
+    html2canvas(inner,{scale:2,useCORS:true,backgroundColor:'#ffffff',windowWidth:inner.scrollWidth||794,ignoreElements:function(el){return el.classList&&el.classList.contains('pdf-no-print');}}).then(function(canvas){
+      if(toolbar)toolbar.style.display='';
+      const{jsPDF}=window.jspdf;
+      const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+      const pw=pdf.internal.pageSize.getWidth(),ph=pdf.internal.pageSize.getHeight();
+      const ih=(canvas.height*pw)/canvas.width;
+      let y=0,rem=ih;
+      while(rem>0){if(y>0)pdf.addPage();pdf.addImage(canvas.toDataURL('image/png'),'PNG',0,y>0?-y:0,pw,ih);y+=ph;rem-=ph;}
+      pdf.save(num+'.pdf');
+    }).catch(function(e){if(toolbar)toolbar.style.display='';toast('PDF failed: '+e.message,'error');});
+  });
 }
 
 // ─── MODALS ─────────────────────────────────────────────────────────────
