@@ -244,7 +244,7 @@ input.inp:focus,select.inp:focus,textarea.inp:focus{border-color:var(--primary)}
     <div class="section" id="sec-invoices">
       <div class="ph">
         <div><div class="pt">Invoices</div><div class="ps" id="inv-sub"></div></div>
-        <button class="btn btn-p" onclick="openM('m-invoice')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>New Invoice</button>
+        <button class="btn btn-p" onclick="document.getElementById('i-num').value='';autoFillInvNum(true);openM('m-invoice')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>New Invoice</button>
       </div>
       <div class="fb">
         <div class="sw_"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg><input class="si_" placeholder="Search invoice / client…" oninput="invQ=this.value;renderInvTable()"></div>
@@ -452,8 +452,9 @@ Offer Visibility Optimisation (COD/Shipping clarity)</textarea>
 <div class="ov hidden" id="m-invoice" onclick="if(event.target===this)closeM('m-invoice')">
   <div class="mo" style="max-width:620px"><div class="mh"><span class="mt">New Invoice</span><button class="mc" onclick="closeM('m-invoice')">✕</button></div>
   <div class="mb">
-    <div class="fr"><div class="fg"><label class="lbl">Client *</label><select class="inp" id="i-cl"></select></div><div class="fg"><label class="lbl">Invoice Date</label><input class="inp" type="date" id="i-dt"></div></div>
-    <div class="fr"><div class="fg"><label class="lbl">Due Date</label><input class="inp" type="date" id="i-dd"></div><div class="fg"><label class="lbl">Tax Type</label><select class="inp" id="i-tt" onchange="calcTot()"><option value="cgst">CGST+SGST (Intrastate)</option><option value="igst">IGST (Interstate)</option></select></div></div>
+    <div class="fr"><div class="fg"><label class="lbl">Client *</label><select class="inp" id="i-cl"></select></div><div class="fg"><label class="lbl">Invoice Number</label><input class="inp" id="i-num" placeholder="Auto-generated" style="font-family:monospace;letter-spacing:.02em"></div></div>
+    <div class="fr"><div class="fg"><label class="lbl">Invoice Date</label><input class="inp" type="date" id="i-dt" oninput="autoFillInvNum()"></div><div class="fg"><label class="lbl">Due Date</label><input class="inp" type="date" id="i-dd"></div></div>
+    <div class="fr"><div class="fg"><label class="lbl">Tax Type</label><select class="inp" id="i-tt" onchange="calcTot()"><option value="cgst">CGST+SGST (Intrastate)</option><option value="igst">IGST (Interstate)</option></select></div><div class="fg" style="align-self:end"><button class="btn btn-o" style="width:100%;font-size:12px" onclick="autoFillInvNum(true)">↺ Auto-number</button></div></div>
     <div style="margin:12px 0 8px;font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em">Line Items</div>
     <div id="li-wrap">
       <div class="fr" style="grid-template-columns:3fr 1fr 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:8px">
@@ -971,21 +972,34 @@ function saveInv(status){
   });
   const g=sub+tax;
   const editId=document.getElementById('m-invoice').dataset.editId;
+  const customNum=(document.getElementById('i-num').value||'').trim();
   if(editId){
     const inv=DB.invoices.find(x=>x.id===editId);
-    if(inv){inv.clientId=cid;inv.date=document.getElementById('i-dt').value;inv.due=document.getElementById('i-dd').value;inv.status=status;inv.subtotal=sub;inv.cgst=ig?0:tax/2;inv.sgst=ig?0:tax/2;inv.igst=ig?tax:0;inv.totalTax=tax;inv.grand=sub+tax;inv.lines=lines;}
+    if(inv){inv.num=customNum||inv.num;inv.clientId=cid;inv.date=document.getElementById('i-dt').value;inv.due=document.getElementById('i-dd').value;inv.status=status;inv.subtotal=sub;inv.cgst=ig?0:tax/2;inv.sgst=ig?0:tax/2;inv.igst=ig?tax:0;inv.totalTax=tax;inv.grand=sub+tax;inv.lines=lines;
+      sbUpsert('invoices',{id:inv.id,num:inv.num,client_id:inv.clientId,date:inv.date,due_date:inv.due,tax_type:ig?'igst':'cgst',status:inv.status,subtotal:inv.subtotal,tax:inv.totalTax,grand:inv.grand});}
     delete document.getElementById('m-invoice').dataset.editId;
     document.querySelector('#m-invoice .mt').textContent='New Invoice';
     document.querySelector('#m-invoice .mf').innerHTML='<button class="btn btn-o" onclick="closeM(\'m-invoice\')">Cancel</button><button class="btn btn-o" onclick="saveInv(\'DRAFT\')">Save Draft</button><button class="btn btn-p" onclick="saveInv(\'SENT\')">Create & Send</button>';
   } else {
-    const n=DB.invCtr++;
     const invDate=document.getElementById('i-dt').value||new Date().toISOString().slice(0,10);
     const fy=(()=>{const d=parseLocalDate(invDate);const y=d.getFullYear();const m=d.getMonth();return m>=3?`${y}-${String(y+1).slice(-2)}`:`${y-1}-${String(y).slice(-2)}`;})();
-    const ni={id:'i'+Date.now(),num:`NQ/${fy}/${String(n).padStart(4,'0')}`,clientId:cid,date:invDate,due:document.getElementById('i-dd').value,status,subtotal:sub,cgst:ig?0:tax/2,sgst:ig?0:tax/2,igst:ig?tax:0,totalTax:tax,grand:g,paid:0,lines};
+    const autoNum=`NQ/${fy}/${String(DB.invCtr).padStart(4,'0')}`;
+    const finalNum=customNum||autoNum;
+    if(!customNum)DB.invCtr++;
+    const ni={id:'i'+Date.now(),num:finalNum,clientId:cid,date:invDate,due:document.getElementById('i-dd').value,status,subtotal:sub,cgst:ig?0:tax/2,sgst:ig?0:tax/2,igst:ig?tax:0,totalTax:tax,grand:g,paid:0,lines};
     DB.invoices.unshift(ni);
-    sbUpsert('invoices',{id:ni.id,client_id:ni.clientId,date:ni.date,due_date:ni.due,tax_type:ig?'igst':'cgst',status:ni.status,subtotal:ni.subtotal,tax:ni.totalTax,grand:ni.grand});
+    sbUpsert('invoices',{id:ni.id,num:ni.num,client_id:ni.clientId,date:ni.date,due_date:ni.due,tax_type:ig?'igst':'cgst',status:ni.status,subtotal:ni.subtotal,tax:ni.totalTax,grand:ni.grand});
   }
   persist();closeM('m-invoice');renderInvTable();renderDash();
+}
+function autoFillInvNum(force){
+  const numField=document.getElementById('i-num');
+  if(!numField)return;
+  // Only auto-fill if field is empty or force=true (from button click)
+  if(!force&&numField.value.trim())return;
+  const invDate=document.getElementById('i-dt').value||new Date().toISOString().slice(0,10);
+  const fy=(()=>{const d=parseLocalDate(invDate);const y=d.getFullYear();const m=d.getMonth();return m>=3?`${y}-${String(y+1).slice(-2)}`:`${y-1}-${String(y).slice(-2)}`;})();
+  numField.value=`NQ/${fy}/${String(DB.invCtr).padStart(4,'0')}`;
 }
 function editInv(id){
   const i=DB.invoices.find(x=>x.id===id);if(!i)return;
@@ -996,6 +1010,7 @@ function editInv(id){
   const sel=document.getElementById('i-cl');
   sel.innerHTML='<option value="">Select client…</option>';
   DB.clients.forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.name;if(c.id===i.clientId)o.selected=true;sel.appendChild(o);});
+  document.getElementById('i-num').value=i.num||'';
   document.getElementById('i-dt').value=i.date;
   document.getElementById('i-dd').value=i.due;
   document.getElementById('i-tt').value=i.igst>0?'igst':'cgst';
