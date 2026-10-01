@@ -111,6 +111,10 @@ tbody tr:hover{background:var(--surface2)}
 .si_{width:100%;padding:8px 10px 8px 32px;border:1px solid var(--glass-border);border-radius:7px;background:rgba(255,255,255,0.75);color:var(--text);outline:none;transition:border-color .15s}
 .si_:focus{border-color:var(--primary)}
 select.fi{padding:8px 10px;border:1px solid var(--glass-border);border-radius:7px;background:rgba(255,255,255,0.75);color:var(--text);outline:none;min-width:130px}
+input[type="date"].fi{padding:8px 10px;border:1px solid var(--glass-border);border-radius:7px;background:rgba(255,255,255,0.75);color:var(--text);outline:none;font-size:13px}
+.qf-btn{padding:6px 14px;border-radius:20px;border:1px solid var(--glass-border);background:rgba(255,255,255,0.6);color:var(--text2);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
+.qf-btn:hover{border-color:var(--primary);color:var(--primary)}
+.qf-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
 /* Lists */
 .lg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
 @media(max-width:800px){.lg{grid-template-columns:1fr}}
@@ -240,7 +244,10 @@ input.inp:focus,select.inp:focus,textarea.inp:focus{border-color:var(--primary)}
         <div><div class="pt">Clients</div><div class="ps" id="cl-sub"></div></div>
         <button class="btn btn-p" onclick="openM('m-client')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>Add Client</button>
       </div>
-      <div class="fb"><div class="sw_"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg><input class="si_" placeholder="Search clients…" oninput="filterClients(this.value)"></div></div>
+      <div class="fb">
+        <div class="sw_"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg><input class="si_" placeholder="Search clients…" oninput="filterClients(this.value)"></div>
+        <select class="fi" id="cl-sort" onchange="renderClients()"><option value="name-asc">A → Z</option><option value="name-desc">Z → A</option><option value="billed-desc">Highest Billed</option><option value="billed-asc">Lowest Billed</option><option value="invoices-desc">Most Invoices</option></select>
+      </div>
       <div id="cl-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px"></div>
     </div>
 
@@ -254,6 +261,15 @@ input.inp:focus,select.inp:focus,textarea.inp:focus{border-color:var(--primary)}
         <div class="sw_"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg><input class="si_" placeholder="Search invoice / client…" oninput="invQ=this.value;renderInvTable()"></div>
         <select class="fi" id="inv-sf" onchange="renderInvTable()"><option value="">All Status</option><option>DRAFT</option><option>SENT</option><option>PARTIALLY_PAID</option><option>PAID</option><option>OVERDUE</option><option>CANCELLED</option></select>
         <select class="fi" id="inv-cf" onchange="renderInvTable()"><option value="">All Clients</option></select>
+        <select class="fi" id="inv-sort" onchange="renderInvTable()"><option value="date-desc">Newest First</option><option value="date-asc">Oldest First</option><option value="amount-desc">Highest Amount</option><option value="amount-asc">Lowest Amount</option><option value="num-asc">Invoice # A→Z</option></select>
+        <input type="date" class="fi" id="inv-df" onchange="renderInvTable()" title="From date" style="cursor:pointer">
+        <input type="date" class="fi" id="inv-dt" onchange="renderInvTable()" title="To date" style="cursor:pointer">
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+        <button class="qf-btn" id="qf-all" onclick="setInvQuickFilter('')">All</button>
+        <button class="qf-btn" id="qf-billed" onclick="setInvQuickFilter('SENT,DRAFT')">Billed</button>
+        <button class="qf-btn" id="qf-paid" onclick="setInvQuickFilter('PAID')">Paid</button>
+        <button class="qf-btn" id="qf-due" onclick="setInvQuickFilter('OVERDUE,PARTIALLY_PAID')">Due / Overdue</button>
       </div>
       <div class="card tw"><table><thead><tr><th>Invoice #</th><th>Client</th><th>Date</th><th>Due Date</th><th style="text-align:right">Amount</th><th style="text-align:right">Due</th><th>Status</th><th></th></tr></thead><tbody id="inv-body"></tbody></table></div>
     </div>
@@ -261,6 +277,13 @@ input.inp:focus,select.inp:focus,textarea.inp:focus{border-color:var(--primary)}
     <!-- PAYMENTS -->
     <div class="section" id="sec-payments">
       <div class="ph"><div><div class="pt">Payments</div><div class="ps" id="pay-sub"></div></div></div>
+      <div class="fb">
+        <div class="sw_"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg><input class="si_" placeholder="Search invoice / client…" oninput="payQ=this.value;renderPays()"></div>
+        <select class="fi" id="pay-mode" onchange="renderPays()"><option value="">All Modes</option><option value="BANK">Bank</option><option value="UPI">UPI</option><option value="CASH">Cash</option><option value="CHEQUE">Cheque</option></select>
+        <select class="fi" id="pay-sort" onchange="renderPays()"><option value="date-desc">Newest First</option><option value="date-asc">Oldest First</option><option value="amount-desc">Highest Amount</option><option value="amount-asc">Lowest Amount</option></select>
+        <input type="date" class="fi" id="pay-df" onchange="renderPays()" title="From date" style="cursor:pointer">
+        <input type="date" class="fi" id="pay-dt" onchange="renderPays()" title="To date" style="cursor:pointer">
+      </div>
       <div class="card tw"><table><thead><tr><th>Date</th><th>Invoice</th><th>Client</th><th>Mode</th><th>Reference</th><th style="text-align:right">Amount</th><th></th></tr></thead><tbody id="pay-body"></tbody></table></div>
     </div>
 
@@ -271,8 +294,12 @@ input.inp:focus,select.inp:focus,textarea.inp:focus{border-color:var(--primary)}
         <button class="btn btn-p" onclick="openM('m-expense')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>Add Expense</button>
       </div>
       <div class="fb">
+        <div class="sw_"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg><input class="si_" placeholder="Search vendor / notes…" oninput="expQ=this.value;renderExp()"></div>
         <select class="fi" id="exp-pf" onchange="renderExp()"><option value="">All Time</option><option value="month">This Month</option><option value="quarter">This Quarter</option><option value="year">This Year</option></select>
         <select class="fi" id="exp-cf" onchange="renderExp()"><option value="">All Categories</option></select>
+        <select class="fi" id="exp-sort" onchange="renderExp()"><option value="date-desc">Newest First</option><option value="date-asc">Oldest First</option><option value="amount-desc">Highest Amount</option><option value="amount-asc">Lowest Amount</option></select>
+        <input type="date" class="fi" id="exp-df" onchange="renderExp()" title="From date" style="cursor:pointer">
+        <input type="date" class="fi" id="exp-dt" onchange="renderExp()" title="To date" style="cursor:pointer">
       </div>
       <div class="card tw"><table><thead><tr><th>Date</th><th>Category</th><th>Vendor</th><th>Mode</th><th style="text-align:right">Amount</th><th style="text-align:right">GST Paid</th><th>Notes</th><th></th></tr></thead><tbody id="exp-body"></tbody></table></div>
     </div>
@@ -285,6 +312,10 @@ input.inp:focus,select.inp:focus,textarea.inp:focus{border-color:var(--primary)}
           <button class="btn btn-o" onclick="openM('m-run-pr')">▶ Run Payroll</button>
           <button class="btn btn-p" onclick="openM('m-emp')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>Add Employee</button>
         </div>
+      </div>
+      <div class="fb">
+        <div class="sw_"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg><input class="si_" placeholder="Search employee / designation…" oninput="prQ=this.value;renderPayroll()"></div>
+        <select class="fi" id="pr-sort" onchange="renderPayroll()"><option value="name-asc">A → Z</option><option value="name-desc">Z → A</option><option value="gross-desc">Highest Gross</option><option value="gross-asc">Lowest Gross</option><option value="net-desc">Highest Net</option></select>
       </div>
       <div class="card tw"><table><thead><tr><th>Name</th><th>Designation</th><th style="text-align:right">Basic/mo</th><th style="text-align:right">Gross/mo</th><th style="text-align:right">Net/mo</th><th>Last Payslip</th><th></th><th>Actions</th></tr></thead><tbody id="pr-body"></tbody></table></div>
     </div>
@@ -934,11 +965,21 @@ function renderDash(){
 let clQ='';
 function renderClients(){
   const q=clQ.toLowerCase();
-  const list=DB.clients.filter(c=>c.name.toLowerCase().includes(q)||c.gstin?.toLowerCase().includes(q)||(c.email||'').includes(q));
-  document.getElementById('cl-sub').textContent=DB.clients.length+' total clients';
+  const sort=document.getElementById('cl-sort')?.value||'name-asc';
+  let list=DB.clients.filter(c=>c.name.toLowerCase().includes(q)||c.gstin?.toLowerCase().includes(q)||(c.email||'').includes(q));
+  list=list.map(c=>{
+    const invs=DB.invoices.filter(i=>i.clientId===c.id&&i.status!=='CANCELLED');
+    return{...c,_billed:invs.reduce((s,i)=>s+i.grand,0),_invCount:invs.length};
+  });
+  if(sort==='name-asc')list.sort((a,b)=>a.name.localeCompare(b.name));
+  else if(sort==='name-desc')list.sort((a,b)=>b.name.localeCompare(a.name));
+  else if(sort==='billed-desc')list.sort((a,b)=>b._billed-a._billed);
+  else if(sort==='billed-asc')list.sort((a,b)=>a._billed-b._billed);
+  else if(sort==='invoices-desc')list.sort((a,b)=>b._invCount-a._invCount);
+  document.getElementById('cl-sub').textContent=list.length+' of '+DB.clients.length+' clients';
   document.getElementById('cl-grid').innerHTML=list.map(c=>{
     const invs=DB.invoices.filter(i=>i.clientId===c.id&&i.status!=='CANCELLED');
-    const billed=invs.reduce((s,i)=>s+i.grand,0);
+    const billed=c._billed||invs.reduce((s,i)=>s+i.grand,0);
     const paid=invs.reduce((s,i)=>s+i.paid,0);
     return`<div class="card" style="padding:18px;cursor:pointer;transition:box-shadow .15s" onmouseover="this.style.boxShadow='var(--shadow-md)'" onmouseout="this.style.boxShadow='var(--shadow)'">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
@@ -1004,21 +1045,41 @@ function addClient(){
 }
 
 // ─── INVOICES ───────────────────────────────────────────────────────────
-let invQ='';
+let invQ='',invQF='';
+function setInvQuickFilter(f){
+  invQF=f;
+  document.querySelectorAll('.qf-btn').forEach(b=>b.classList.remove('active'));
+  const map={'':'qf-all','SENT,DRAFT':'qf-billed','PAID':'qf-paid','OVERDUE,PARTIALLY_PAID':'qf-due'};
+  const el=document.getElementById(map[f]);if(el)el.classList.add('active');
+  renderInvTable();
+}
 function sbadge(s){const m={DRAFT:'bx',SENT:'bb',PARTIALLY_PAID:'ba',PAID:'bg',OVERDUE:'br',CANCELLED:'bx'};const l={DRAFT:'Draft',SENT:'Sent',PARTIALLY_PAID:'Part. Paid',PAID:'Paid',OVERDUE:'Overdue',CANCELLED:'Cancelled'};return`<span class="badge ${m[s]||'bx'}">${l[s]||s}</span>`}
 function renderInvTable(){
   const sf=document.getElementById('inv-sf')?.value||'';
   const cf=document.getElementById('inv-cf')?.value||'';
+  const sort=document.getElementById('inv-sort')?.value||'date-desc';
+  const df=document.getElementById('inv-df')?.value||'';
+  const dt=document.getElementById('inv-dt')?.value||'';
   const q=invQ.toLowerCase();
   const cfsEl=document.getElementById('inv-cf');
   if(cfsEl&&cfsEl.options.length===1)DB.clients.forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.name;cfsEl.appendChild(o);});
-  const list=DB.invoices.filter(i=>{
+  // Active quick filter: invQF is comma-separated statuses or empty
+  const qfStatuses=invQF?invQF.split(','):[];
+  let list=DB.invoices.filter(i=>{
     if(sf&&i.status!==sf)return false;
+    if(qfStatuses.length&&!qfStatuses.includes(i.status))return false;
     if(cf&&i.clientId!==cf)return false;
+    if(df&&i.date<df)return false;
+    if(dt&&i.date>dt)return false;
     const cl=DB.clients.find(c=>c.id===i.clientId);
     if(q&&!i.num.toLowerCase().includes(q)&&!cl?.name.toLowerCase().includes(q))return false;
     return true;
   });
+  if(sort==='date-desc')list=[...list].sort((a,b)=>b.date.localeCompare(a.date));
+  else if(sort==='date-asc')list=[...list].sort((a,b)=>a.date.localeCompare(b.date));
+  else if(sort==='amount-desc')list=[...list].sort((a,b)=>b.grand-a.grand);
+  else if(sort==='amount-asc')list=[...list].sort((a,b)=>a.grand-b.grand);
+  else if(sort==='num-asc')list=[...list].sort((a,b)=>a.num.localeCompare(b.num));
   const tot=list.reduce((s,i)=>s+i.grand,0);
   const due=list.reduce((s,i)=>s+(i.grand-i.paid),0);
   document.getElementById('inv-sub').textContent=list.length+' invoices · '+inrK(tot)+' billed · '+inrK(due)+' due';
@@ -1188,10 +1249,31 @@ function editInv(id){
 }
 
 // ─── PAYMENTS ───────────────────────────────────────────────────────────
+let payQ='';
 function renderPays(){
-  const tot=DB.payments.reduce((s,p)=>s+p.amount,0);
-  document.getElementById('pay-sub').textContent=DB.payments.length+' payments · '+inrK(tot)+' total';
-  document.getElementById('pay-body').innerHTML=[...DB.payments].reverse().map(p=>{
+  const q=payQ.toLowerCase();
+  const mode=document.getElementById('pay-mode')?.value||'';
+  const sort=document.getElementById('pay-sort')?.value||'date-desc';
+  const df=document.getElementById('pay-df')?.value||'';
+  const dt=document.getElementById('pay-dt')?.value||'';
+  let list=DB.payments.filter(p=>{
+    if(mode&&p.mode!==mode)return false;
+    if(df&&p.date<df)return false;
+    if(dt&&p.date>dt)return false;
+    if(q){
+      const i=DB.invoices.find(x=>x.id===p.invoiceId);
+      const cl=DB.clients.find(c=>c.id===i?.clientId);
+      if(!i?.num.toLowerCase().includes(q)&&!cl?.name.toLowerCase().includes(q)&&!(p.ref||'').toLowerCase().includes(q))return false;
+    }
+    return true;
+  });
+  if(sort==='date-desc')list=[...list].sort((a,b)=>b.date.localeCompare(a.date));
+  else if(sort==='date-asc')list=[...list].sort((a,b)=>a.date.localeCompare(b.date));
+  else if(sort==='amount-desc')list=[...list].sort((a,b)=>b.amount-a.amount);
+  else if(sort==='amount-asc')list=[...list].sort((a,b)=>a.amount-b.amount);
+  const tot=list.reduce((s,p)=>s+p.amount,0);
+  document.getElementById('pay-sub').textContent=list.length+' payments · '+inrK(tot)+' total';
+  document.getElementById('pay-body').innerHTML=list.map(p=>{
     const i=DB.invoices.find(x=>x.id===p.invoiceId);const cl=DB.clients.find(c=>c.id===i?.clientId);
     return`<tr>
       <td>${fmt(p.date)}</td>
@@ -1238,18 +1320,30 @@ function savePayment(){
 }
 
 // ─── EXPENSES ───────────────────────────────────────────────────────────
+let expQ='';
 function renderExp(){
+  const q=expQ.toLowerCase();
   const cat=document.getElementById('exp-cf')?.value||'';
   const period=document.getElementById('exp-pf')?.value||'';
+  const sort=document.getElementById('exp-sort')?.value||'date-desc';
+  const df=document.getElementById('exp-df')?.value||'';
+  const dt=document.getElementById('exp-dt')?.value||'';
   const cats=[...new Set(DB.expenses.map(e=>e.cat))].sort();
   const cf=document.getElementById('exp-cf');
   if(cf&&cf.options.length===1)cats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;cf.appendChild(o);});
   const now=new Date();const cy=now.getFullYear(),cm=now.getMonth();
   let list=DB.expenses;
   if(period==='month')list=list.filter(e=>{const d=new Date(e.date);return d.getFullYear()===cy&&d.getMonth()===cm;});
-  else if(period==='quarter'){const q=Math.floor(cm/3);list=list.filter(e=>{const d=new Date(e.date);return d.getFullYear()===cy&&Math.floor(d.getMonth()/3)===q;});}
+  else if(period==='quarter'){const qn=Math.floor(cm/3);list=list.filter(e=>{const d=new Date(e.date);return d.getFullYear()===cy&&Math.floor(d.getMonth()/3)===qn;});}
   else if(period==='year')list=list.filter(e=>new Date(e.date).getFullYear()===cy);
   if(cat)list=list.filter(e=>e.cat===cat);
+  if(df)list=list.filter(e=>e.date>=df);
+  if(dt)list=list.filter(e=>e.date<=dt);
+  if(q)list=list.filter(e=>(e.vendor||'').toLowerCase().includes(q)||(e.notes||'').toLowerCase().includes(q)||(e.cat||'').toLowerCase().includes(q));
+  if(sort==='date-desc')list=[...list].sort((a,b)=>b.date.localeCompare(a.date));
+  else if(sort==='date-asc')list=[...list].sort((a,b)=>a.date.localeCompare(b.date));
+  else if(sort==='amount-desc')list=[...list].sort((a,b)=>b.amount-a.amount);
+  else if(sort==='amount-asc')list=[...list].sort((a,b)=>a.amount-b.amount);
   const tot=list.reduce((s,e)=>s+e.amount,0);
   document.getElementById('exp-sub').textContent=list.length+' entries · '+inrK(tot)+' total';
   document.getElementById('exp-body').innerHTML=list.map(e=>`<tr>
@@ -1304,11 +1398,21 @@ function calcNet(e){
   const esi=g<2100000?Math.round(g*0.0075):0;
   return{gross:g,pf,esi,pt:20000,net:g-pf-esi-20000};
 }
+let prQ='';
 function renderPayroll(){
-  const totGross=DB.employees.reduce((s,e)=>s+e.basic+e.hra+e.allow,0);
-  document.getElementById('pr-sub').textContent=DB.employees.length+' employees · '+inrK(totGross)+'/mo gross';
+  const q=prQ.toLowerCase();
+  const sort=document.getElementById('pr-sort')?.value||'name-asc';
+  let list=DB.employees.filter(e=>!q||e.name.toLowerCase().includes(q)||e.desig.toLowerCase().includes(q));
+  list=list.map(e=>({...e,_gross:e.basic+e.hra+e.allow,_net:calcNet(e).net}));
+  if(sort==='name-asc')list.sort((a,b)=>a.name.localeCompare(b.name));
+  else if(sort==='name-desc')list.sort((a,b)=>b.name.localeCompare(a.name));
+  else if(sort==='gross-desc')list.sort((a,b)=>b._gross-a._gross);
+  else if(sort==='gross-asc')list.sort((a,b)=>a._gross-b._gross);
+  else if(sort==='net-desc')list.sort((a,b)=>b._net-a._net);
+  const totGross=list.reduce((s,e)=>s+e._gross,0);
+  document.getElementById('pr-sub').textContent=list.length+' of '+DB.employees.length+' employees · '+inrK(totGross)+'/mo gross';
   const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  document.getElementById('pr-body').innerHTML=DB.employees.map(e=>{
+  document.getElementById('pr-body').innerHTML=list.map(e=>{
     const {gross,net}=calcNet(e);
     const ps=DB.payslips.filter(p=>p.eid===e.id).sort((a,b)=>b.year-a.year||b.month-a.month)[0];
     const slipBtn=ps?`<button onclick="openPayslip('${e.id}')" style="font-size:12px;padding:3px 9px;border:1px solid var(--primary);border-radius:5px;background:var(--blue-bg);color:var(--primary);cursor:pointer">View Payslip</button>`:'';
@@ -1392,7 +1496,7 @@ function openPayslip(eid){
   const months=['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const html=`<div style="font-family:'Public Sans',system-ui,sans-serif;max-width:680px;margin:0 auto;border:1px solid #dde5f0;border-radius:10px;overflow:hidden">
     <div style="background:#001931;color:#fff;padding:20px 28px;display:flex;justify-content:space-between;align-items:center">
-      <div style="display:flex;align-items:center;gap:12px">${getLogoBlock(true)}${DB.settings.logoAI?`<img src="${DB.settings.logoAI}" style="max-height:40px;max-width:110px;object-fit:contain;opacity:.85" alt="AI Evoked">`:`<div style="font-size:11px;opacity:.6;color:#fff;line-height:1.3">AI Evoked</div>`}</div>
+      <div style="display:flex;align-items:center;gap:12px">${getLogoBlock(true)}${DB.settings.logoAI?`<img src="${DB.settings.logoAI}" style="max-height:64px;max-width:160px;object-fit:contain;opacity:.9" alt="AI Evoked">`:`<div style="font-size:13px;font-weight:600;opacity:.8;color:#fff;line-height:1.3">AI Evoked</div>`}</div>
       <div style="text-align:right"><div style="font-size:18px;font-weight:700">PAYSLIP</div><div style="font-size:12px;opacity:.8">${months[ps.month]} ${ps.year}</div></div>
     </div>
     <div style="padding:24px 28px;background:#f5f8ff">
@@ -1857,8 +1961,8 @@ function renderProjections(){
       <td>${dur}</td>
       <td>${statusBadge[d.status]||d.status}</td>
       <td style="white-space:nowrap">
-        <button onclick="editDeal(${d.id})" style="font-size:12px;padding:3px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--text);cursor:pointer">Edit</button>
-        <button onclick="delConfirm(this,()=>{DB.deals=DB.deals.filter(x=>x.id!==${d.id});persist();renderProjections();})" style="font-size:12px;padding:3px 8px;border:1px solid var(--red);border-radius:5px;background:var(--surface);color:var(--red);cursor:pointer;margin-left:4px">✕</button>
+        <button onclick="editDeal('${d.id}')" style="font-size:12px;padding:3px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--text);cursor:pointer">Edit</button>
+        <button onclick="delConfirm(this,()=>{DB.deals=DB.deals.filter(x=>x.id!=='${d.id}');persist();renderProjections();})" style="font-size:12px;padding:3px 8px;border:1px solid var(--red);border-radius:5px;background:var(--surface);color:var(--red);cursor:pointer;margin-left:4px">✕</button>
       </td>
     </tr>`;
   }).join('');
