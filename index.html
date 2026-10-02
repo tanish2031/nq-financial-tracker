@@ -2048,7 +2048,7 @@ function renderProjections(){
       <td>${statusBadge[d.status]||d.status}</td>
       <td style="white-space:nowrap">
         <button onclick="editDeal('${d.id}')" style="font-size:12px;padding:3px 8px;border:1px solid var(--border);border-radius:5px;background:var(--surface2);color:var(--text);cursor:pointer">Edit</button>
-        <button onclick="delConfirm(this,()=>{DB.deals=DB.deals.filter(x=>x.id!=='${d.id}');persist();renderProjections();})" style="font-size:12px;padding:3px 8px;border:1px solid var(--red);border-radius:5px;background:var(--surface);color:var(--red);cursor:pointer;margin-left:4px">✕</button>
+        <button onclick="delConfirm(this,()=>{DB.deals=DB.deals.filter(x=>String(x.id)!=='${d.id}');sbDelete('deals','${d.id}');persist();renderProjections();})" style="font-size:12px;padding:3px 8px;border:1px solid var(--red);border-radius:5px;background:var(--surface);color:var(--red);cursor:pointer;margin-left:4px">✕</button>
       </td>
     </tr>`;
   }).join('');
@@ -2081,7 +2081,7 @@ function saveDeal(){
     status:document.getElementById('deal-status').value,
     notes:document.getElementById('deal-notes').value.trim(),
   };
-  if(id){const i=DB.deals.findIndex(d=>d.id===id);if(i>=0)DB.deals[i]=deal;else DB.deals.push(deal);}
+  if(id){const i=DB.deals.findIndex(d=>String(d.id)===String(id));if(i>=0)DB.deals[i]=deal;else DB.deals.push(deal);}
   else DB.deals.push(deal);
   sbUpsert('deals',{id:String(deal.id),title:deal.client||'Deal',client:deal.client,value:deal.mrr||0,stage:deal.status||'lead',notes:deal.notes||''});
   persist();closeM('m-deal');
@@ -2089,7 +2089,7 @@ function saveDeal(){
 }
 
 function editDeal(id){
-  const d=DB.deals.find(x=>x.id===id);if(!d)return;
+  const d=DB.deals.find(x=>String(x.id)===String(id));if(!d)return;
   document.getElementById('deal-modal-title').textContent='Edit Deal';
   document.getElementById('deal-id').value=d.id;
   document.getElementById('deal-client').value=d.client;
