@@ -332,7 +332,7 @@ input.inp:focus,select.inp:focus,textarea.inp:focus{border-color:var(--primary);
         <input type="date" class="fi" id="exp-df" onchange="renderExp()" title="From date" style="cursor:pointer">
         <input type="date" class="fi" id="exp-dt" onchange="renderExp()" title="To date" style="cursor:pointer">
       </div>
-      <div class="card" style="margin-bottom:16px"><div class="ch"><span class="ct">📊 Monthly Breakdown — Top Spending Category</span></div><div class="cb tw"><table><thead><tr><th>Month</th><th>Top Category</th><th style="text-align:right">Spent on Top</th><th style="text-align:right">% of Month</th><th style="text-align:right">Month Total</th></tr></thead><tbody id="exp-monthly-body"></tbody></table></div></div>
+      <div class="card" style="margin-bottom:16px"><div class="ch"><span class="ct">📊 Expenses by Category</span><span id="exp-pie-note" style="font-size:12px;color:var(--text2);font-weight:400"></span></div><div class="cb"><div style="position:relative;height:300px"><canvas id="exp-pie"></canvas></div><div id="exp-pie-empty" style="display:none;text-align:center;color:var(--text3);padding:40px 0">No expenses in this period</div></div></div>
       <div class="card tw"><table><thead id="exp-thead"><tr><th class="sortable" onclick="thSort('exp','date')">Date</th><th class="sortable" onclick="thSort('exp','cat')">Category</th><th class="sortable" onclick="thSort('exp','vendor')">Vendor</th><th>Mode</th><th class="sortable" style="text-align:right" onclick="thSort('exp','amount')">Amount</th><th style="text-align:right">GST Paid</th><th>Notes</th><th></th></tr></thead><tbody id="exp-body"></tbody></table></div>
     </div>
 
@@ -955,6 +955,7 @@ function toggleTheme(){
   // Charts bake in theme colors at draw time — re-render so they match
   try{if(typeof renderDash==='function')renderDash();}catch(e){}
   try{if(typeof renderProjections==='function'&&document.getElementById('proj-chart'))renderProjections();}catch(e){}
+  try{if(typeof renderExpPie==='function'&&document.getElementById('exp-pie'))renderExpPie();}catch(e){}
 }
 
 // ─── DASHBOARD ──────────────────────────────────────────────────────────
@@ -1602,49 +1603,39 @@ function renderExp(){
       <button onclick="delConfirm(this,()=>{const _ex=DB.expenses.find(x=>x.id==='${e.id}');if(_ex?.supabaseId)sbDelete('expenses',_ex.supabaseId);DB.expenses=DB.expenses.filter(x=>x.id!=='${e.id}');persist();renderExp();})" style="font-size:12px;padding:3px 9px;border:1px solid var(--red);border-radius:5px;background:var(--surface);color:var(--red);cursor:pointer">Delete</button>
     </td>
   </tr>`).join('');
-  renderExpMonthly();
+  renderExpPie();
 }
-// Per-month top spending category (last 12 months with data, newest first)
-function renderExpMonthly(){
-  const body=document.getElementById('exp-monthly-body');
-  if(!body)return;
-  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const byMonth={};
-  DB.expenses.forEach(e=>{
-    const d=parseLocalDate(e.date);if(isNaN(d))return;
-    const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
-    if(!byMonth[key])byMonth[key]={total:0,cats:{}};
-    byMonth[key].total+=e.amount;
-    const c=e.cat||'Uncategorised';
-    byMonth[key].cats[c]=(byMonth[key].cats[c]||0)+e.amount;
-  });
-  const keys=Object.keys(byMonth).sort((a,b)=>b.localeCompare(a)).slice(0,12);
-  if(!keys.length){body.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:20px">No expenses recorded yet</td></tr>';return;}
-  body.innerHTML=keys.map(k=>{
-    const m=byMonth[k];
-    const top=Object.entries(m.cats).sort((a,b)=>b[1]-a[1])[0];
-    const [ty,tm]=k.split('-');
-    const pct=m.total>0?Math.round(top[1]/m.total*100):0;
-    const label=months[parseInt(tm)-1]+' '+ty;
-    return`<tr style="cursor:pointer" onclick="filterExpMonth('${k}','${top[0].replace(/'/g,'')}')">
-      <td style="font-weight:600">${label}</td>
-      <td><span class="badge bb">${top[0]}</span></td>
-      <td style="text-align:right;font-weight:700" class="num">${inr(top[1])}</td>
-      <td style="text-align:right;color:var(--text2)" class="num">${pct}%</td>
-      <td style="text-align:right;color:var(--text2)" class="num">${inr(m.total)}</td>
-    </tr>`;
-  }).join('');
-}
-// Click a month row → filter the table to that month + category
-function filterExpMonth(key,cat){
-  const [y,mo]=key.split('-');
-  const first=`${y}-${mo}-01`;
-  const last=`${y}-${mo}-${new Date(parseInt(y),parseInt(mo),0).getDate()}`;
-  const dfEl=document.getElementById('exp-df'),dtEl=document.getElementById('exp-dt'),pf=document.getElementById('exp-pf');
-  if(pf)pf.value='';
-  if(dfEl)dfEl.value=first;
-  if(dtEl)dtEl.value=last;
-  renderExp();
+// Expenses by category as a doughnut chart (respects the period + date filters,
+// ignores the single-category dropdown so the full breakdown always shows)
+let expPieC=null;
+function renderExpPie(){
+  const cv=document.getElementById('exp-pie');
+  if(!cv||typeof Chart==='undefined')return;
+  const empty=document.getElementById('exp-pie-empty');
+  const note=document.getElementById('exp-pie-note');
+  const period=document.getElementById('exp-pf')?.value||'';
+  const df=document.getElementById('exp-df')?.value||'';
+  const dt=document.getElementById('exp-dt')?.value||'';
+  const now=new Date();const cy=now.getFullYear(),cm=now.getMonth();
+  let src=DB.expenses;
+  if(period==='month')src=src.filter(e=>{const d=parseLocalDate(e.date);return d.getFullYear()===cy&&d.getMonth()===cm;});
+  else if(period==='quarter'){const qn=Math.floor(cm/3);src=src.filter(e=>{const d=parseLocalDate(e.date);return d.getFullYear()===cy&&Math.floor(d.getMonth()/3)===qn;});}
+  else if(period==='year')src=src.filter(e=>parseLocalDate(e.date).getFullYear()===cy);
+  if(df)src=src.filter(e=>e.date>=df);
+  if(dt)src=src.filter(e=>e.date<=dt);
+  const catMap={};src.forEach(e=>{const c=e.cat||'Uncategorised';catMap[c]=(catMap[c]||0)+e.amount;});
+  const entries=Object.entries(catMap).sort((a,b)=>b[1]-a[1]);
+  const total=entries.reduce((s,e)=>s+e[1],0);
+  if(expPieC){expPieC.destroy();expPieC=null;}
+  if(!entries.length){cv.style.display='none';if(empty)empty.style.display='block';if(note)note.textContent='';return;}
+  cv.style.display='block';if(empty)empty.style.display='none';
+  if(note)note.textContent=`Top: ${entries[0][0]} · ${inrK(entries[0][1])} (${Math.round(entries[0][1]/total*100)}%) · Total ${inrK(total)}`;
+  const labels=entries.map(e=>e[0]);
+  const data=entries.map(e=>e[1]/100);
+  const colors=['#5B5CF6','#22C55E','#F59E0B','#EF4444','#06B6D4','#8B5CF6','#F97316','#EC4899','#14B8A6','#64748B','#A855F7','#0EA5E9'];
+  const dk=document.documentElement.getAttribute('data-theme')==='dark';
+  const tc=dk?'#9AA4B2':'#4B5563';
+  expPieC=new Chart(cv,{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:2,borderColor:dk?'#151A23':'#fff'}]},options:{responsive:true,maintainAspectRatio:false,cutout:'58%',plugins:{legend:{position:'right',labels:{color:tc,boxWidth:12,padding:10,font:{size:12}}},tooltip:{callbacks:{label:c=>' '+c.label+': ₹'+c.parsed.toLocaleString('en-IN')+' ('+Math.round(c.parsed/data.reduce((s,x)=>s+x,0)*100)+'%)'}}}}});
 }
 function editExp(id){
   const e=DB.expenses.find(x=>x.id===id);if(!e)return;
