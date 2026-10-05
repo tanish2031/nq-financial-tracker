@@ -254,8 +254,8 @@ input.inp:focus,select.inp:focus,textarea.inp:focus{border-color:var(--primary);
         <div class="st" onclick="gotoInv('')"><div class="tr"><div><div class="sl">Total Billed</div><div class="sv num" id="s-billed">—</div><div class="ss" id="s-billed-s"></div></div><div class="si" style="background:var(--blue-bg)"><svg viewBox="0 0 24 24" fill="#2563EB"><path d="M14 2H6a2 2 0 00-2 2v16l4-4h10a2 2 0 002-2V4a2 2 0 00-2-2z"/></svg></div></div></div>
         <div class="st" onclick="nav(document.querySelector('[data-s=payments]'))"><div class="tr"><div><div class="sl">Received</div><div class="sv num" id="s-rcvd">—</div><div class="ss" id="s-rcvd-s"></div></div><div class="si" style="background:var(--green-bg)"><svg viewBox="0 0 24 24" fill="#16A34A"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg></div></div></div>
         <div class="st" onclick="gotoInv('OVERDUE')"><div class="tr"><div><div class="sl">Overdue</div><div class="sv num" id="s-ovd">—</div><div class="ss" id="s-ovd-s"></div></div><div class="si" style="background:var(--red-bg)"><svg viewBox="0 0 24 24" fill="#DC2626"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg></div></div></div>
-        <div class="st"><div class="tr"><div><div class="sl">Expenses</div><div class="sv num" id="s-exp">—</div></div><div class="si" style="background:#F3E8FF"><svg viewBox="0 0 24 24" fill="#7C3AED"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg></div></div></div>
-        <div class="st"><div class="tr"><div><div class="sl">Net Cash</div><div class="sv num" id="s-net">—</div></div><div class="si" style="background:var(--green-bg)" id="s-net-icon"><svg viewBox="0 0 24 24" fill="#16A34A"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg></div></div></div>
+        <div class="st" onclick="nav(document.querySelector('[data-s=expenses]'))"><div class="tr"><div><div class="sl">Expenses</div><div class="sv num" id="s-exp">—</div></div><div class="si" style="background:#F3E8FF"><svg viewBox="0 0 24 24" fill="#7C3AED"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg></div></div></div>
+        <div class="st" onclick="nav(document.querySelector('[data-s=reports]'))"><div class="tr"><div><div class="sl">Net Cash</div><div class="sv num" id="s-net">—</div></div><div class="si" style="background:var(--green-bg)" id="s-net-icon"><svg viewBox="0 0 24 24" fill="#16A34A"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg></div></div></div>
         <div class="st" onclick="gotoInv('')"><div class="tr"><div><div class="sl">Unpaid</div><div class="sv num" id="s-unpaid">—</div><div class="ss" id="s-unpaid-s"></div></div><div class="si" style="background:var(--amber-bg)"><svg viewBox="0 0 24 24" fill="#D97706"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg></div></div></div>
       </div>
       <div class="cg">
@@ -332,6 +332,7 @@ input.inp:focus,select.inp:focus,textarea.inp:focus{border-color:var(--primary);
         <input type="date" class="fi" id="exp-df" onchange="renderExp()" title="From date" style="cursor:pointer">
         <input type="date" class="fi" id="exp-dt" onchange="renderExp()" title="To date" style="cursor:pointer">
       </div>
+      <div class="card" style="margin-bottom:16px"><div class="ch"><span class="ct">📊 Monthly Breakdown — Top Spending Category</span></div><div class="cb tw"><table><thead><tr><th>Month</th><th>Top Category</th><th style="text-align:right">Spent on Top</th><th style="text-align:right">% of Month</th><th style="text-align:right">Month Total</th></tr></thead><tbody id="exp-monthly-body"></tbody></table></div></div>
       <div class="card tw"><table><thead id="exp-thead"><tr><th class="sortable" onclick="thSort('exp','date')">Date</th><th class="sortable" onclick="thSort('exp','cat')">Category</th><th class="sortable" onclick="thSort('exp','vendor')">Vendor</th><th>Mode</th><th class="sortable" style="text-align:right" onclick="thSort('exp','amount')">Amount</th><th style="text-align:right">GST Paid</th><th>Notes</th><th></th></tr></thead><tbody id="exp-body"></tbody></table></div>
     </div>
 
@@ -1601,6 +1602,49 @@ function renderExp(){
       <button onclick="delConfirm(this,()=>{const _ex=DB.expenses.find(x=>x.id==='${e.id}');if(_ex?.supabaseId)sbDelete('expenses',_ex.supabaseId);DB.expenses=DB.expenses.filter(x=>x.id!=='${e.id}');persist();renderExp();})" style="font-size:12px;padding:3px 9px;border:1px solid var(--red);border-radius:5px;background:var(--surface);color:var(--red);cursor:pointer">Delete</button>
     </td>
   </tr>`).join('');
+  renderExpMonthly();
+}
+// Per-month top spending category (last 12 months with data, newest first)
+function renderExpMonthly(){
+  const body=document.getElementById('exp-monthly-body');
+  if(!body)return;
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const byMonth={};
+  DB.expenses.forEach(e=>{
+    const d=parseLocalDate(e.date);if(isNaN(d))return;
+    const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+    if(!byMonth[key])byMonth[key]={total:0,cats:{}};
+    byMonth[key].total+=e.amount;
+    const c=e.cat||'Uncategorised';
+    byMonth[key].cats[c]=(byMonth[key].cats[c]||0)+e.amount;
+  });
+  const keys=Object.keys(byMonth).sort((a,b)=>b.localeCompare(a)).slice(0,12);
+  if(!keys.length){body.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:20px">No expenses recorded yet</td></tr>';return;}
+  body.innerHTML=keys.map(k=>{
+    const m=byMonth[k];
+    const top=Object.entries(m.cats).sort((a,b)=>b[1]-a[1])[0];
+    const [ty,tm]=k.split('-');
+    const pct=m.total>0?Math.round(top[1]/m.total*100):0;
+    const label=months[parseInt(tm)-1]+' '+ty;
+    return`<tr style="cursor:pointer" onclick="filterExpMonth('${k}','${top[0].replace(/'/g,'')}')">
+      <td style="font-weight:600">${label}</td>
+      <td><span class="badge bb">${top[0]}</span></td>
+      <td style="text-align:right;font-weight:700" class="num">${inr(top[1])}</td>
+      <td style="text-align:right;color:var(--text2)" class="num">${pct}%</td>
+      <td style="text-align:right;color:var(--text2)" class="num">${inr(m.total)}</td>
+    </tr>`;
+  }).join('');
+}
+// Click a month row → filter the table to that month + category
+function filterExpMonth(key,cat){
+  const [y,mo]=key.split('-');
+  const first=`${y}-${mo}-01`;
+  const last=`${y}-${mo}-${new Date(parseInt(y),parseInt(mo),0).getDate()}`;
+  const dfEl=document.getElementById('exp-df'),dtEl=document.getElementById('exp-dt'),pf=document.getElementById('exp-pf');
+  if(pf)pf.value='';
+  if(dfEl)dfEl.value=first;
+  if(dtEl)dtEl.value=last;
+  renderExp();
 }
 function editExp(id){
   const e=DB.expenses.find(x=>x.id===id);if(!e)return;
