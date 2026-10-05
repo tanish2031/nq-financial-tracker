@@ -504,6 +504,7 @@ Offer Visibility Optimisation (COD/Shipping clarity)</textarea>
   <div class="mo"><div class="mh"><span class="mt">Add Client</span><button class="mc" onclick="closeM('m-client')">✕</button></div>
   <div class="mb">
     <div class="fr"><div class="fg"><label class="lbl">Company Name *</label><input class="inp" id="c-n"></div><div class="fg"><label class="lbl">GSTIN</label><input class="inp" id="c-g" placeholder="22AAAAA0000A1Z5"></div></div>
+    <div class="fr"><div class="fg"><label class="lbl">PAN</label><input class="inp" id="c-pan" placeholder="AAAAA0000A" style="text-transform:uppercase"></div><div class="fg"></div></div>
     <div class="fr"><div class="fg"><label class="lbl">State</label><select class="inp" id="c-st"><option value="">Select state</option><option>Andhra Pradesh</option><option>Arunachal Pradesh</option><option>Assam</option><option>Bihar</option><option>Chhattisgarh</option><option>Goa</option><option>Gujarat</option><option>Haryana</option><option>Himachal Pradesh</option><option>Jharkhand</option><option>Karnataka</option><option>Kerala</option><option>Madhya Pradesh</option><option>Maharashtra</option><option>Manipur</option><option>Meghalaya</option><option>Mizoram</option><option>Nagaland</option><option>Odisha</option><option>Punjab</option><option>Rajasthan</option><option>Sikkim</option><option>Tamil Nadu</option><option>Telangana</option><option>Tripura</option><option>Uttar Pradesh</option><option>Uttarakhand</option><option>West Bengal</option><option>Andaman and Nicobar Islands</option><option>Chandigarh</option><option>Dadra and Nagar Haveli and Daman and Diu</option><option>Delhi</option><option>Jammu and Kashmir</option><option>Ladakh</option><option>Lakshadweep</option><option>Puducherry</option></select></div><div class="fg"><label class="lbl">Payment Terms</label><select class="inp" id="c-pt"><option value="0">Immediate</option><option value="15">Net 15</option><option value="30" selected>Net 30</option><option value="45">Net 45</option><option value="60">Net 60</option></select></div></div>
     <div class="fr"><div class="fg"><label class="lbl">Email</label><input class="inp" id="c-em" type="email"></div><div class="fg"><label class="lbl">Phone</label><input class="inp" id="c-ph" placeholder="+91 98765 43210"></div></div>
     <div class="fr full"><div class="fg"><label class="lbl">Billing Address</label><textarea class="inp" id="c-ad" rows="2"></textarea></div></div>
@@ -703,7 +704,7 @@ async function syncFromDB(){
     if(pay.data){pay.data.forEach(p=>{paidMap[p.invoice_id]=(paidMap[p.invoice_id]||0)+p.amount;});}
 
     if(cl.data&&cl.data.length){
-      const sbClients=cl.data.map(r=>({_id:r.id,id:r.id,name:r.name,email:r.email||'',phone:r.phone||'',gstin:r.gstin||'',state:r.state||'',billingAddress:r.address||'',paymentTerms:30}));
+      const sbClients=cl.data.map(r=>({_id:r.id,id:r.id,name:r.name,email:r.email||'',phone:r.phone||'',gstin:r.gstin||'',pan:r.pan||'',state:r.state||'',billingAddress:r.address||'',paymentTerms:30}));
       DB.clients=mergeById(sbClients,DB.clients).map(({_id,...r})=>r);
     } else {
       // Supabase has no clients — push any local ones up
@@ -1100,6 +1101,7 @@ function editClient(id){
   const c=DB.clients.find(x=>x.id===id);if(!c)return;
   document.getElementById('c-n').value=c.name||'';
   document.getElementById('c-g').value=c.gstin||'';
+  document.getElementById('c-pan').value=c.pan||'';
   document.getElementById('c-st').value=c.state||'';
   document.getElementById('c-pt').value=c.paymentTerms||30;
   document.getElementById('c-em').value=c.email||'';
@@ -1147,17 +1149,17 @@ function addClient(){
   const editId=document.getElementById('c-n').dataset.editId;
   if(editId){
     const c=DB.clients.find(x=>x.id===editId);
-    if(c){Object.assign(c,{name:n,gstin:document.getElementById('c-g').value,state:document.getElementById('c-st').value,paymentTerms:parseInt(document.getElementById('c-pt').value),email:document.getElementById('c-em').value,phone:document.getElementById('c-ph').value,billingAddress:document.getElementById('c-ad').value});
-    sbUpsert('clients',{id:c.id,name:c.name,email:c.email,phone:c.phone,gstin:c.gstin,state:c.state,address:c.billingAddress});}
+    if(c){Object.assign(c,{name:n,gstin:document.getElementById('c-g').value,pan:(document.getElementById('c-pan').value||'').trim().toUpperCase(),state:document.getElementById('c-st').value,paymentTerms:parseInt(document.getElementById('c-pt').value),email:document.getElementById('c-em').value,phone:document.getElementById('c-ph').value,billingAddress:document.getElementById('c-ad').value});
+    sbUpsert('clients',{id:c.id,name:c.name,email:c.email,phone:c.phone,gstin:c.gstin,pan:c.pan,state:c.state,address:c.billingAddress});}
     delete document.getElementById('c-n').dataset.editId;
     document.querySelector('#m-client .mt').textContent='Add Client';
   }else{
-    const nc={id:'c'+Date.now(),name:n,gstin:document.getElementById('c-g').value,state:document.getElementById('c-st').value,paymentTerms:parseInt(document.getElementById('c-pt').value),email:document.getElementById('c-em').value,phone:document.getElementById('c-ph').value,billingAddress:document.getElementById('c-ad').value,city:''};
+    const nc={id:'c'+Date.now(),name:n,gstin:document.getElementById('c-g').value,pan:(document.getElementById('c-pan').value||'').trim().toUpperCase(),state:document.getElementById('c-st').value,paymentTerms:parseInt(document.getElementById('c-pt').value),email:document.getElementById('c-em').value,phone:document.getElementById('c-ph').value,billingAddress:document.getElementById('c-ad').value,city:''};
     DB.clients.push(nc);
-    sbUpsert('clients',{id:nc.id,name:nc.name,email:nc.email,phone:nc.phone,gstin:nc.gstin,state:nc.state,address:nc.billingAddress});
+    sbUpsert('clients',{id:nc.id,name:nc.name,email:nc.email,phone:nc.phone,gstin:nc.gstin,pan:nc.pan,state:nc.state,address:nc.billingAddress});
   }
   persist();closeM('m-client');renderClients();
-  ['c-n','c-g','c-em','c-ph','c-ad'].forEach(id=>document.getElementById(id).value='');
+  ['c-n','c-g','c-pan','c-em','c-ph','c-ad'].forEach(id=>document.getElementById(id).value='');
 }
 
 // ─── INVOICES ───────────────────────────────────────────────────────────
