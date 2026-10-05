@@ -711,7 +711,9 @@ async function syncFromDB(){
     if(inv.data&&inv.data.length){
       const sbInv=inv.data.map(r=>{
         const ig=r.tax_type==='igst';
-        return{_id:r.id,id:r.id,num:r.invoice_number||r.id,clientId:r.client_id,date:r.date,due:r.due_date,status:r.status,subtotal:r.subtotal||0,grand:r.grand||0,totalTax:r.tax||0,cgst:ig?0:(r.tax||0)/2,sgst:ig?0:(r.tax||0)/2,igst:ig?(r.tax||0):0,paid:paidMap[r.id]||0,lines:(r.invoice_items||[]).map(l=>({desc:l.description,qty:l.qty,rate:l.rate,hsn:l.hsn||'',tax:l.tax_rate||18,total:l.amount}))};
+        const localMatch=DB.invoices.find(li=>li.id===r.id);
+        const num=r.invoice_number||localMatch?.num||'';
+        return{_id:r.id,id:r.id,num,clientId:r.client_id,date:r.date,due:r.due_date,status:r.status,subtotal:r.subtotal||0,grand:r.grand||0,totalTax:r.tax||0,cgst:ig?0:(r.tax||0)/2,sgst:ig?0:(r.tax||0)/2,igst:ig?(r.tax||0):0,paid:paidMap[r.id]||0,lines:(r.invoice_items||[]).map(l=>({desc:l.description,qty:l.qty,rate:l.rate,hsn:l.hsn||'',tax:l.tax_rate||18,total:l.amount}))};
       });
       DB.invoices=mergeById(sbInv,DB.invoices).map(({_id,...r})=>r);
     }
@@ -769,7 +771,7 @@ async function pushLocalToSupabase(){
     }
     for(const i of DB.invoices){
       const ig=i.igst>0;
-      await sb.from('invoices').upsert({id:i.id,client_id:i.clientId,date:i.date,due_date:i.due,tax_type:ig?'igst':'cgst_sgst',status:i.status,subtotal:i.subtotal,tax:i.totalTax,grand:i.grand},{onConflict:'id'});
+      await sb.from('invoices').upsert({id:i.id,invoice_number:i.num,client_id:i.clientId,date:i.date,due_date:i.due,tax_type:ig?'igst':'cgst_sgst',status:i.status,subtotal:i.subtotal,tax:i.totalTax,grand:i.grand},{onConflict:'id'});
       if(i.lines&&i.lines.length){
         await sb.from('invoice_items').delete().eq('invoice_id',i.id);
         await sb.from('invoice_items').insert(i.lines.map(l=>({invoice_id:i.id,description:l.desc,qty:l.qty,rate:l.rate,amount:l.total||Math.round(l.qty*l.rate*(1+(l.tax||18)/100))})));
@@ -821,7 +823,7 @@ function toast(msg,type){
 
 // Push a single record to Supabase (fire and forget)
 async function sbUpsert(table,data){try{const r=await sb.from(table).upsert(data);if(r.error)console.warn('sbUpsert',table,r.error.message);}catch(e){console.warn('sbUpsert',e);}}
-async function sbDelete(table,id){try{await sb.from(table).delete().eq('id',id);}catch(e){console.warn('sbDelete',e);}}
+async function sbDelete(table,id){try{const r=await sb.from(table).delete().eq('id',id);if(r.error)console.warn('sbDelete',table,id,r.error.message);return r;}catch(e){console.warn('sbDelete',e);}}
 // Insert to a table with auto-increment integer PK; stores returned id as record.supabaseId
 async function sbInsert(table,data,localRecord){
   try{
@@ -1092,15 +1094,37 @@ function editClient(id){
   document.querySelector('#m-client .mt').textContent='Edit Client';
   openM('m-client');
 }
-function deleteClient(id){
+async function deleteInvoice(id){
+  // Remove locally first for instant UI feedback
+  DB.invoices=DB.invoices.filter(x=>x.id!==id);
+  DB.payments=DB.payments.filter(x=>x.invoiceId!==id);
+  persist();renderInvTable();renderDash();
+  // FK-safe Supabase delete: invoice_items → payments → invoice
+  try{
+    await sb.from('invoice_items').delete().eq('invoice_id',id);
+    await sb.from('payments').delete().eq('invoice_id',id);
+    await sbDelete('invoices',id);
+  }catch(e){console.warn('deleteInvoice sync',e);}
+}
+async function deleteClient(id){
   const invIds=DB.invoices.filter(i=>i.clientId===id).map(i=>i.id);
+  // Remove locally first so the UI updates immediately
   DB.payments=DB.payments.filter(p=>!invIds.includes(p.invoiceId));
-  invIds.forEach(iid=>{sbDelete('invoices',iid);});
   DB.invoices=DB.invoices.filter(i=>i.clientId!==id);
   DB.clients=DB.clients.filter(c=>c.id!==id);
-  sbDelete('clients',id);
   persist();
   renderClients();
+  // Delete from Supabase in FK-safe order: invoice_items → invoices → client.
+  // Must await so the client row isn't rejected by a foreign-key constraint
+  // (which previously caused deleted clients to reappear on the next sync).
+  try{
+    for(const iid of invIds){
+      await sb.from('invoice_items').delete().eq('invoice_id',iid);
+      await sb.from('payments').delete().eq('invoice_id',iid);
+      await sbDelete('invoices',iid);
+    }
+    await sbDelete('clients',id);
+  }catch(e){console.warn('deleteClient sync',e);}
 }
 function addClient(){
   const n=document.getElementById('c-n').value.trim();
@@ -1183,7 +1207,7 @@ function renderInvTable(){
       <td onclick="openDet('${i.id}')" style="cursor:pointer">${sbadge(i)}</td>
       <td style="white-space:nowrap">
         <button onclick="event.stopPropagation();editInv('${i.id}');openM('m-invoice')" style="font-size:12px;padding:3px 9px;border:1px solid var(--primary);border-radius:5px;background:var(--surface);color:var(--primary);cursor:pointer;margin-right:4px">Edit</button>
-        <button onclick="event.stopPropagation();delConfirm(this,()=>{sbDelete('invoices','${i.id}');DB.invoices=DB.invoices.filter(x=>x.id!=='${i.id}');DB.payments=DB.payments.filter(x=>x.invoiceId!=='${i.id}');persist();renderInvTable();renderDash();})" style="font-size:12px;padding:3px 9px;border:1px solid var(--red);border-radius:5px;background:var(--surface);color:var(--red);cursor:pointer">Delete</button>
+        <button onclick="event.stopPropagation();delConfirm(this,()=>deleteInvoice('${i.id}'))" style="font-size:12px;padding:3px 9px;border:1px solid var(--red);border-radius:5px;background:var(--surface);color:var(--red);cursor:pointer">Delete</button>
       </td>
     </tr>`;
   }).join('');
@@ -1277,22 +1301,38 @@ function saveInv(status){
   if(editId){
     const inv=DB.invoices.find(x=>x.id===editId);
     if(inv){inv.num=customNum||inv.num;inv.clientId=cid;inv.date=document.getElementById('i-dt').value;inv.due=document.getElementById('i-dd').value;inv.status=status;inv.subtotal=sub;inv.cgst=ig?0:tax/2;inv.sgst=ig?0:tax/2;inv.igst=ig?tax:0;inv.totalTax=tax;inv.grand=sub+tax;inv.lines=lines;
-      sbUpsert('invoices',{id:inv.id,client_id:inv.clientId,date:inv.date,due_date:inv.due,tax_type:ig?'igst':'cgst_sgst',status:inv.status,subtotal:inv.subtotal,tax:inv.totalTax,grand:inv.grand});}
+      sbUpsert('invoices',{id:inv.id,invoice_number:inv.num,client_id:inv.clientId,date:inv.date,due_date:inv.due,tax_type:ig?'igst':'cgst_sgst',status:inv.status,subtotal:inv.subtotal,tax:inv.totalTax,grand:inv.grand});}
     delete document.getElementById('m-invoice').dataset.editId;
     document.querySelector('#m-invoice .mt').textContent='New Invoice';
     document.querySelector('#m-invoice .mf').innerHTML='<button class="btn btn-o" onclick="closeM(\'m-invoice\')">Cancel</button><button class="btn btn-o" onclick="saveInv(\'DRAFT\')">Save Draft</button><button class="btn btn-p" onclick="saveInv(\'SENT\')">Create & Send</button>';
   } else {
     const invDate=document.getElementById('i-dt').value||new Date().toISOString().slice(0,10);
-    const fy=(()=>{const d=parseLocalDate(invDate);const y=d.getFullYear();const m=d.getMonth();return m>=3?`${y}-${String(y+1).slice(-2)}`:`${y-1}-${String(y).slice(-2)}`;})();
-    const autoNum=`NQ/${fy}/${String(DB.invCtr).padStart(4,'0')}`;
+    const fy=fyForDate(invDate);
+    const prefix=(DB.settings&&DB.settings.invPrefix)||'NQ';
+    const autoNum=`${prefix}/${fy}/${String(nextInvNum(fy,prefix)).padStart(2,'0')}`;
     const finalNum=customNum||autoNum;
-    if(!customNum)DB.invCtr++;
     const ni={id:'i'+Date.now(),num:finalNum,clientId:cid,date:invDate,due:document.getElementById('i-dd').value,status,subtotal:sub,cgst:ig?0:tax/2,sgst:ig?0:tax/2,igst:ig?tax:0,totalTax:tax,grand:g,paid:0,lines};
     DB.invoices.unshift(ni);
-    sbUpsert('invoices',{id:ni.id,client_id:ni.clientId,date:ni.date,due_date:ni.due,tax_type:ig?'igst':'cgst_sgst',status:ni.status,subtotal:ni.subtotal,tax:ni.totalTax,grand:ni.grand});
+    sbUpsert('invoices',{id:ni.id,invoice_number:ni.num,client_id:ni.clientId,date:ni.date,due_date:ni.due,tax_type:ig?'igst':'cgst_sgst',status:ni.status,subtotal:ni.subtotal,tax:ni.totalTax,grand:ni.grand});
     if(ni.lines&&ni.lines.length){sb.from('invoice_items').insert(ni.lines.map(l=>({invoice_id:ni.id,description:l.desc,qty:l.qty,rate:l.rate,amount:l.total||0,hsn:l.hsn||'',tax_rate:l.tax||18}))).then(r=>{if(r.error)console.warn('invoice_items insert',r.error.message);});}
   }
   persist();closeM('m-invoice');renderInvTable();renderDash();
+}
+function fyForDate(dateStr){
+  const d=parseLocalDate(dateStr);const y=d.getFullYear();const m=d.getMonth();
+  return m>=3?`${y}-${String(y+1).slice(-2)}`:`${y-1}-${String(y).slice(-2)}`;
+}
+// Next sequential number = highest existing number in this prefix+FY series + 1
+function nextInvNum(fy,prefix){
+  let max=0;
+  const esc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  const re=new RegExp('^'+esc(prefix)+'\\/'+esc(fy)+'\\/(\\d+)$');
+  DB.invoices.forEach(i=>{
+    if(!i.num)return;
+    const m=String(i.num).match(re);
+    if(m){const n=parseInt(m[1],10);if(n>max)max=n;}
+  });
+  return max+1;
 }
 function autoFillInvNum(force){
   const numField=document.getElementById('i-num');
@@ -1300,9 +1340,9 @@ function autoFillInvNum(force){
   // Only auto-fill if field is empty or force=true (from button click)
   if(!force&&numField.value.trim())return;
   const invDate=document.getElementById('i-dt').value||new Date().toISOString().slice(0,10);
-  const fy=(()=>{const d=parseLocalDate(invDate);const y=d.getFullYear();const m=d.getMonth();return m>=3?`${y}-${String(y+1).slice(-2)}`:`${y-1}-${String(y).slice(-2)}`;})();
+  const fy=fyForDate(invDate);
   const prefix=(DB.settings&&DB.settings.invPrefix)||'NQ';
-  numField.value=`${prefix}/${fy}/${String(DB.invCtr).padStart(4,'0')}`;
+  numField.value=`${prefix}/${fy}/${String(nextInvNum(fy,prefix)).padStart(2,'0')}`;
 }
 function editInv(id){
   const i=DB.invoices.find(x=>x.id===id);if(!i)return;
