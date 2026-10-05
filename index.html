@@ -492,10 +492,6 @@ Offer Visibility Optimisation (COD/Shipping clarity)</textarea>
           <div style="font-size:13px;color:var(--text2);margin-bottom:2px">Change display names and passwords for each login. Usernames cannot be changed.</div>
           <div id="st-users-list" style="display:flex;flex-direction:column;gap:12px"></div>
         </div></div>
-        <div class="card"><div class="ch"><span class="ct">Invoice Numbering</span></div><div class="cb" style="display:flex;flex-direction:column;gap:12px">
-          <div style="font-size:13px;color:var(--text2)">Reassign clean sequential numbers to every invoice in the <b>AI</b> series, ordered by date (oldest = 01 within each financial year, e.g. <b>AI/2025-26/01</b>). Use this to restore missing invoice numbers. Numbers are synced to the cloud so they stick after refresh.</div>
-          <button class="btn btn-o" style="align-self:flex-start" onclick="if(confirm('Renumber ALL invoices into the AI series by date? This overwrites existing invoice numbers.'))renumberInvoices()">↺ Renumber all invoices (AI series)</button>
-        </div></div>
         <button class="btn btn-p" onclick="saveSettings()">Save Settings</button>
       </div>
     </div>
@@ -717,8 +713,11 @@ async function syncFromDB(){
       const sbInv=inv.data.map(r=>{
         const ig=r.tax_type==='igst';
         const localMatch=DB.invoices.find(li=>li.id===r.id);
-        const num=r.invoice_number||localMatch?.num||'';
-        // Supabase row has no number but we recovered one locally — push it back so it persists
+        // Priority: stored invoice_number → legacy id-as-number (contains "/") → local value
+        let num=r.invoice_number||'';
+        if(!num&&String(r.id).includes('/'))num=r.id;
+        if(!num)num=localMatch?.num||'';
+        // Supabase row has no number but we recovered one — push it back so it persists
         if(!r.invoice_number&&num)numRecover.push({id:r.id,num});
         return{_id:r.id,id:r.id,num,clientId:r.client_id,date:r.date,due:r.due_date,status:r.status,subtotal:r.subtotal||0,grand:r.grand||0,totalTax:r.tax||0,cgst:ig?0:(r.tax||0)/2,sgst:ig?0:(r.tax||0)/2,igst:ig?(r.tax||0):0,paid:paidMap[r.id]||0,lines:(r.invoice_items||[]).map(l=>({desc:l.description,qty:l.qty,rate:l.rate,hsn:l.hsn||'',tax:l.tax_rate||18,total:l.amount}))};
       });
@@ -1341,34 +1340,6 @@ function nextInvNum(fy,prefix){
     if(m){const n=parseInt(m[1],10);if(n>max)max=n;}
   });
   return max+1;
-}
-// Renumber every invoice into a clean AI/{FY}/{NN} series, ordered by date
-// (oldest = 01 within each financial year). Used to restore lost numbers.
-async function renumberInvoices(){
-  if(!DB.invoices.length)return toast('No invoices to renumber','error');
-  DB.settings.invPrefix='AI';
-  const prefix='AI';
-  const sorted=[...DB.invoices].sort((a,b)=>{
-    const d=String(a.date||'').localeCompare(String(b.date||''));
-    return d!==0?d:String(a.id).localeCompare(String(b.id));
-  });
-  const fyCounters={};
-  sorted.forEach(inv=>{
-    const fy=fyForDate(inv.date||new Date().toISOString().slice(0,10));
-    fyCounters[fy]=(fyCounters[fy]||0)+1;
-    inv.num=`${prefix}/${fy}/${String(fyCounters[fy]).padStart(2,'0')}`;
-  });
-  persist();
-  if(typeof renderInvTable==='function')renderInvTable();
-  if(typeof renderDash==='function')renderDash();
-  sbSetting('invPrefix','AI');
-  toast('Renumbering invoices & syncing…','success');
-  // Persist each number to Supabase so it survives refreshes
-  let ok=0;
-  for(const inv of DB.invoices){
-    try{const r=await sb.from('invoices').update({invoice_number:inv.num}).eq('id',inv.id);if(!r.error)ok++;else console.warn('renumber',inv.id,r.error.message);}catch(e){console.warn('renumber',e);}
-  }
-  toast(`Done — ${DB.invoices.length} invoices renumbered in AI series.`,'success');
 }
 function autoFillInvNum(force){
   const numField=document.getElementById('i-num');
