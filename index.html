@@ -1251,7 +1251,7 @@ function openDet(id){
     ${i.grand-i.paid>0?`<div class="tl" style="color:var(--red);font-weight:600"><span>Balance Due</span><span class="num">${inr(i.grand-i.paid)}</span></div>`:''}`;
   document.getElementById('det-words').textContent=aw(i.grand);
   const pays=DB.payments.filter(p=>p.invoiceId===id);
-  document.getElementById('det-pays').innerHTML=pays.length?`<div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Payment History</div>`+pays.map(p=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px"><div><span style="font-weight:600">${p.mode}</span> · ${fmt(p.date)}<span style="color:var(--text2);margin-left:6px">${p.ref}</span></div><span class="num" style="font-weight:700;color:var(--green)">${inr(p.amount)}</span></div>`).join(''):'';
+  document.getElementById('det-pays').innerHTML=pays.length?`<div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Payment History</div>`+pays.map(p=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px"><div><span style="font-weight:600">${p.mode}</span> · ${fmt(p.date)}<span style="color:var(--text2);margin-left:6px">${p.ref||''}</span></div><div style="display:flex;align-items:center;gap:8px;white-space:nowrap"><span class="num" style="font-weight:700;color:var(--green)">${inr(p.amount)}</span><button onclick="editPaymentFromDet('${p.id}','${id}')" style="font-size:11px;padding:2px 9px;border:1px solid var(--primary);border-radius:5px;background:var(--surface);color:var(--primary);cursor:pointer">Edit</button><button onclick="delConfirm(this,()=>deletePayment('${p.id}'))" style="font-size:11px;padding:2px 9px;border:1px solid var(--red);border-radius:5px;background:var(--surface);color:var(--red);cursor:pointer">✕</button></div></div>`).join(''):'';
   const foot=document.getElementById('det-foot');
   foot.innerHTML='';
   if(['SENT','PARTIALLY_PAID','OVERDUE'].includes(i.status)){
@@ -1476,14 +1476,32 @@ function renderPays(){
     </tr>`;
   }).join('');
 }
+let _payReturnInv=null;
 function editPayment(id){
   const p=DB.payments.find(x=>x.id===id);if(!p)return;
+  _payReturnInv=null; // default: no return-to-detail unless set by editPaymentFromDet
   document.getElementById('ep-id').value=p.id;
   document.getElementById('ep-date').value=p.date;
   document.getElementById('ep-amount').value=(p.amount/100).toFixed(2);
   document.getElementById('ep-mode').value=p.mode;
   document.getElementById('ep-ref').value=p.ref||'';
   openM('m-edit-pay');
+}
+// Edit a payment from within the invoice-detail view, then return to it
+function editPaymentFromDet(pid,invId){
+  closeM('m-inv-det');
+  setTimeout(()=>{editPayment(pid);_payReturnInv=invId;},120);
+}
+// Delete a payment and refresh everything (including the open invoice detail)
+function deletePayment(id){
+  const p=DB.payments.find(x=>x.id===id);if(!p)return;
+  const invId=p.invoiceId;
+  if(p.supabaseId)sbDelete('payments',p.supabaseId);
+  DB.payments=DB.payments.filter(x=>x.id!==id);
+  if(invId)recalcInvPaid(invId);
+  persist();renderPays();renderDash();renderInvTable();
+  const det=document.getElementById('m-inv-det');
+  if(activeInv===invId&&det&&!det.classList.contains('hidden'))openDet(invId);
 }
 function recalcInvPaid(invId){
   const inv=DB.invoices.find(i=>i.id===invId);if(!inv)return;
@@ -1504,7 +1522,9 @@ function savePayment(){
   else{sbInsert('payments',{invoice_id:p.invoiceId,client_id:_pinv?.clientId||null,date:p.date,amount:p.amount,method:p.mode,ref:p.ref||''},p);}
   recalcInvPaid(p.invoiceId);
   persist();closeM('m-edit-pay');
-  renderPays();renderDash();
+  renderPays();renderDash();renderInvTable();
+  // If editing came from the invoice detail, reopen it to show the update
+  if(_payReturnInv){const inv=_payReturnInv;_payReturnInv=null;setTimeout(()=>openDet(inv),120);}
 }
 
 // ─── EXPENSES ───────────────────────────────────────────────────────────
