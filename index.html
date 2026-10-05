@@ -680,7 +680,7 @@ const sb=supabase.createClient(SB_URL,SB_KEY);
 // Sync from Supabase on load
 async function syncFromDB(){
   try{
-    const [cl,inv,pay,exp,emp,ps,dl,st,ct]=await Promise.all([
+    const [cl,inv,pay,exp,emp,ps,dl,st,ct,mo]=await Promise.all([
       sb.from('clients').select('*'),
       sb.from('invoices').select('*,invoice_items(*)'),
       sb.from('payments').select('*'),
@@ -690,6 +690,7 @@ async function syncFromDB(){
       sb.from('deals').select('*'),
       sb.from('settings').select('*'),
       sb.from('counters').select('*'),
+      sb.from('mous').select('*'),
     ]);
     // Merge helper: take Supabase rows as truth but keep any local records not yet in Supabase
     function mergeById(sbRows,localArr){
@@ -733,19 +734,26 @@ async function syncFromDB(){
       DB.expenses=mergeById(sbExp,DB.expenses).map(({_id,...r})=>r);
     }
     if(emp.data&&emp.data.length){
-      const sbEmp=emp.data.map(r=>({_id:'e'+r.id,id:'e'+r.id,supabaseId:r.id,name:r.name,desig:r.role||'',basic:r.basic||0,hra:r.hra||0,allow:r.allowances||0,pf:12}));
+      const sbEmp=emp.data.map(r=>({_id:'e'+r.id,id:'e'+r.id,supabaseId:r.id,name:r.name,desig:r.role||'',basic:r.basic||0,hra:r.hra||0,allow:r.allowances||0,pf:r.pf_percent!=null?Number(r.pf_percent):12}));
       DB.employees=mergeById(sbEmp,DB.employees).map(({_id,...r})=>r);
     }
     if(ps.data&&ps.data.length){
       const sbPs=ps.data.map(r=>{
         const mp=r.month?r.month.split('-'):[2026,1];
-        return{_id:'ps'+r.id,id:'ps'+r.id,supabaseId:r.id,eid:'e'+r.employee_id,month:parseInt(mp[1]),year:parseInt(mp[0]),gross:r.gross||0,deductions:r.deductions||0,net:r.net||0,paidOn:r.paid_on,status:r.paid_on?'PAID':'DRAFT'};
+        return{_id:'ps'+r.id,id:'ps'+r.id,supabaseId:r.id,eid:'e'+r.employee_id,month:parseInt(mp[1]),year:parseInt(mp[0]),gross:r.gross||0,deductions:r.deductions||0,net:r.net||0,pf:r.pf||0,esi:r.esi||0,pt:r.pt||0,paidOn:r.paid_on,status:r.paid_on?'PAID':'DRAFT'};
       });
       DB.payslips=mergeById(sbPs,DB.payslips).map(({_id,...r})=>r);
     }
     if(dl.data&&dl.data.length){
-      const sbDl=dl.data.map(r=>({_id:r.id,id:r.id,title:r.title,client:r.client||'',value:r.value||0,stage:r.stage||'lead',prob:r.probability||0,close:r.expected_close||'',notes:r.notes||''}));
+      const sbDl=dl.data.map(r=>({_id:r.id,id:r.id,client:r.client||r.title||'',tier:r.tier||'',mrr:r.value||0,status:r.stage||'lead',start:r.start_date||'',end:r.expected_close||'',notes:r.notes||''}));
       DB.deals=mergeById(sbDl,DB.deals).map(({_id,...r})=>r);
+    }
+    if(mo&&mo.data&&mo.data.length){
+      const sbMo=mo.data.map(r=>({_id:r.id,id:r.id,client:r.client||'',date:r.date||'',status:r.status||'Draft',html:r.html||'',notes:r.notes||''}));
+      DB.mous=mergeById(sbMo,DB.mous).map(({_id,...r})=>r);
+    } else if(DB.mous&&DB.mous.length){
+      // Push any local-only MOUs up to the cloud
+      DB.mous.forEach(m=>sbUpsert('mous',{id:m.id,client:m.client,date:m.date,status:m.status,html:m.html||'',notes:m.notes||''}));
     }
     // Push any local-only records that didn't make it to Supabase yet
     DB.clients.filter(c=>!c.supabaseId&&c.id.startsWith('c')).forEach(c=>sbUpsert('clients',{id:c.id,name:c.name,email:c.email,phone:c.phone,gstin:c.gstin,state:c.state,address:c.billingAddress}));
@@ -1256,7 +1264,7 @@ function openDet(id){
   foot.appendChild(eb);
   const pb=document.createElement('button');pb.className='btn btn-p';pb.innerHTML='📄 Generate PDF';pb.onclick=()=>{closeM('m-inv-det');setTimeout(()=>openPDF(id),150)};
   foot.appendChild(pb);
-  const db=document.createElement('button');db.className='btn';db.style.cssText='border:1px solid var(--red);color:var(--red);background:var(--surface);border-radius:7px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer';db.innerHTML='🗑 Delete';db.onclick=()=>{delConfirm(db,()=>{sbDelete('invoices',id);DB.invoices=DB.invoices.filter(x=>x.id!==id);DB.payments=DB.payments.filter(x=>x.invoiceId!==id);persist();closeM('m-inv-det');renderInvTable();renderDash();});};
+  const db=document.createElement('button');db.className='btn';db.style.cssText='border:1px solid var(--red);color:var(--red);background:var(--surface);border-radius:7px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer';db.innerHTML='🗑 Delete';db.onclick=()=>{delConfirm(db,()=>{deleteInvoice(id);closeM('m-inv-det');});};
   foot.appendChild(db);
   const cb=document.createElement('button');cb.className='btn btn-o';cb.textContent='Close';cb.onclick=()=>closeM('m-inv-det');
   foot.appendChild(cb);
@@ -1267,7 +1275,7 @@ function recPay(){
   const amt=Math.round(parseFloat(document.getElementById('p-a').value)*100);
   const newPay={id:'p'+Date.now(),invoiceId:activeInv,date:document.getElementById('p-d').value,amount:amt,mode:document.getElementById('p-m').value,ref:document.getElementById('p-r').value};
   DB.payments.push(newPay);
-  sbInsert('payments',{invoice_id:newPay.invoiceId,date:newPay.date,amount:newPay.amount,method:newPay.mode,ref:newPay.ref||''},newPay);
+  sbInsert('payments',{invoice_id:newPay.invoiceId,client_id:i.clientId||null,date:newPay.date,amount:newPay.amount,method:newPay.mode,ref:newPay.ref||''},newPay);
   i.paid+=amt;i.status=i.paid>=i.grand?'PAID':'PARTIALLY_PAID';
   persist();closeM('m-pay');renderInvTable();renderPays();renderDash();
 }
@@ -1308,7 +1316,11 @@ function saveInv(status){
   if(editId){
     const inv=DB.invoices.find(x=>x.id===editId);
     if(inv){inv.num=customNum||inv.num;inv.clientId=cid;inv.date=document.getElementById('i-dt').value;inv.due=document.getElementById('i-dd').value;inv.status=status;inv.subtotal=sub;inv.cgst=ig?0:tax/2;inv.sgst=ig?0:tax/2;inv.igst=ig?tax:0;inv.totalTax=tax;inv.grand=sub+tax;inv.lines=lines;
-      sbUpsert('invoices',{id:inv.id,invoice_number:inv.num,client_id:inv.clientId,date:inv.date,due_date:inv.due,tax_type:ig?'igst':'cgst_sgst',status:inv.status,subtotal:inv.subtotal,tax:inv.totalTax,grand:inv.grand});}
+      sbUpsert('invoices',{id:inv.id,invoice_number:inv.num,client_id:inv.clientId,date:inv.date,due_date:inv.due,tax_type:ig?'igst':'cgst_sgst',status:inv.status,subtotal:inv.subtotal,tax:inv.totalTax,grand:inv.grand});
+      // Re-sync line items: delete old rows then insert the current set
+      sb.from('invoice_items').delete().eq('invoice_id',inv.id).then(()=>{
+        if(inv.lines&&inv.lines.length)sb.from('invoice_items').insert(inv.lines.map(l=>({invoice_id:inv.id,description:l.desc,qty:l.qty,rate:l.rate,amount:l.total||0,hsn:l.hsn||'',tax_rate:l.tax||18}))).then(r=>{if(r.error)console.warn('invoice_items edit',r.error.message);});
+      });}
     delete document.getElementById('m-invoice').dataset.editId;
     document.querySelector('#m-invoice .mt').textContent='New Invoice';
     document.querySelector('#m-invoice .mf').innerHTML='<button class="btn btn-o" onclick="closeM(\'m-invoice\')">Cancel</button><button class="btn btn-o" onclick="saveInv(\'DRAFT\')">Save Draft</button><button class="btn btn-p" onclick="saveInv(\'SENT\')">Create & Send</button>';
@@ -1456,8 +1468,9 @@ function savePayment(){
   p.amount=Math.round(parseFloat(document.getElementById('ep-amount').value||0)*100);
   p.mode=document.getElementById('ep-mode').value;
   p.ref=document.getElementById('ep-ref').value;
-  if(p.supabaseId){sbUpsert('payments',{id:p.supabaseId,invoice_id:p.invoiceId,date:p.date,amount:p.amount,method:p.mode,ref:p.ref||''});}
-  else{sbInsert('payments',{invoice_id:p.invoiceId,date:p.date,amount:p.amount,method:p.mode,ref:p.ref||''},p);}
+  const _pinv=DB.invoices.find(x=>x.id===p.invoiceId);
+  if(p.supabaseId){sbUpsert('payments',{id:p.supabaseId,invoice_id:p.invoiceId,client_id:_pinv?.clientId||null,date:p.date,amount:p.amount,method:p.mode,ref:p.ref||''});}
+  else{sbInsert('payments',{invoice_id:p.invoiceId,client_id:_pinv?.clientId||null,date:p.date,amount:p.amount,method:p.mode,ref:p.ref||''},p);}
   recalcInvPaid(p.invoiceId);
   persist();closeM('m-edit-pay');
   renderPays();renderDash();
@@ -1590,14 +1603,16 @@ function addEmp(){
   const editId=document.getElementById('m-emp').dataset.editId;
   if(editId){
     const emp=DB.employees.find(x=>x.id===editId);
-    if(emp){emp.name=n;emp.desig=document.getElementById('em-d').value;emp.basic=Math.round(parseFloat(document.getElementById('em-b').value||0)*100);emp.hra=Math.round(parseFloat(document.getElementById('em-h').value||0)*100);emp.allow=Math.round(parseFloat(document.getElementById('em-a').value||0)*100);emp.pf=parseFloat(document.getElementById('em-p').value||12);}
+    if(emp){emp.name=n;emp.desig=document.getElementById('em-d').value;emp.basic=Math.round(parseFloat(document.getElementById('em-b').value||0)*100);emp.hra=Math.round(parseFloat(document.getElementById('em-h').value||0)*100);emp.allow=Math.round(parseFloat(document.getElementById('em-a').value||0)*100);emp.pf=parseFloat(document.getElementById('em-p').value||12);
+      if(emp.supabaseId)sbUpsert('employees',{id:emp.supabaseId,name:emp.name,role:emp.desig,basic:emp.basic,hra:emp.hra,allowances:emp.allow,pf_percent:emp.pf});
+      else sbInsert('employees',{name:emp.name,role:emp.desig,basic:emp.basic,hra:emp.hra,allowances:emp.allow,pf_percent:emp.pf},emp);}
     delete document.getElementById('m-emp').dataset.editId;
     document.querySelector('#m-emp .mt').textContent='Add Employee';
     document.querySelector('#m-emp .mf button:last-child').textContent='Add Employee';
   } else {
     const nem={id:'e'+Date.now(),name:n,desig:document.getElementById('em-d').value,basic:Math.round(parseFloat(document.getElementById('em-b').value||0)*100),hra:Math.round(parseFloat(document.getElementById('em-h').value||0)*100),allow:Math.round(parseFloat(document.getElementById('em-a').value||0)*100),pf:parseFloat(document.getElementById('em-p').value||12)};
     DB.employees.push(nem);
-    sbInsert('employees',{name:nem.name,role:nem.desig,basic:nem.basic,hra:nem.hra,allowances:nem.allow},nem);
+    sbInsert('employees',{name:nem.name,role:nem.desig,basic:nem.basic,hra:nem.hra,allowances:nem.allow,pf_percent:nem.pf},nem);
   }
   persist();closeM('m-emp');renderPayroll();
 }
@@ -1633,7 +1648,7 @@ function runPR(){
     const empSupaId=e.supabaseId;
     if(empSupaId){
       const mStr=y+'-'+(m<10?'0':'')+m;
-      sbInsert('payslips',{employee_id:empSupaId,month:mStr,gross,deductions:pf+esi+pt,net,paid_on:null},newSlip);
+      sbInsert('payslips',{employee_id:empSupaId,month:mStr,gross,deductions:pf+esi+pt,net,pf,esi,pt,paid_on:null},newSlip);
     }
     ct++;
   });
@@ -2149,7 +2164,7 @@ function saveDeal(){
   };
   if(id){const i=DB.deals.findIndex(d=>String(d.id)===String(id));if(i>=0)DB.deals[i]=deal;else DB.deals.push(deal);}
   else DB.deals.push(deal);
-  sbUpsert('deals',{id:String(deal.id),title:deal.client||'Deal',client:deal.client,value:deal.mrr||0,stage:deal.status||'lead',notes:deal.notes||''});
+  sbUpsert('deals',{id:String(deal.id),title:deal.client||'Deal',client:deal.client,value:deal.mrr||0,stage:deal.status||'lead',tier:deal.tier||'',start_date:deal.start||null,expected_close:deal.end||null,notes:deal.notes||''});
   persist();closeM('m-deal');
   renderProjections();
 }
@@ -2307,8 +2322,9 @@ function saveMOUToList(){
   const today=new Date().toISOString().slice(0,10);
   const dup=DB.mous.find(m=>m.client===clName&&m.date===today);
   if(dup){toast('Already saved for '+clName+' today — update status in tracker below.','warn');return;}
-  const mouRecord={id:'m'+Date.now(),client:clName,date:today,status:'Draft',html:bodyContent};
+  const mouRecord={id:'m'+Date.now(),client:clName,date:today,status:'Draft',html:bodyContent,notes:''};
   DB.mous.push(mouRecord);
+  sbUpsert('mous',{id:mouRecord.id,client:mouRecord.client,date:mouRecord.date,status:mouRecord.status,html:mouRecord.html||'',notes:''});
   persist();
   renderMOUTracker();
   document.getElementById('m-mou').classList.add('hidden');
@@ -2346,7 +2362,9 @@ function downloadMOU(){
   // Also save to tracker if not already saved today
   const today=new Date().toISOString().slice(0,10);
   if(!DB.mous.find(m=>m.client===clName&&m.date===today)){
-    DB.mous.push({id:'m'+Date.now(),client:clName,date:today,status:'Draft',html:bodyContent});
+    const _mou={id:'m'+Date.now(),client:clName,date:today,status:'Draft',html:bodyContent,notes:''};
+    DB.mous.push(_mou);
+    sbUpsert('mous',{id:_mou.id,client:_mou.client,date:_mou.date,status:_mou.status,html:_mou.html||'',notes:''});
     persist();
     renderMOUTracker();
   }
@@ -2439,6 +2457,8 @@ function saveSettings(){
   persist();
   sbSetting('co',JSON.stringify(CO));
   if(DB.settings.users)sbSetting('users',JSON.stringify(DB.settings.users));
+  if(DB.settings.invPrefix)sbSetting('invPrefix',DB.settings.invPrefix);
+  if(DB.settings.defaultTerms!=null)sbSetting('defaultTerms',String(DB.settings.defaultTerms));
   toast('Settings saved and synced.','success');
 }
 
@@ -2498,14 +2518,15 @@ function renderMOUTracker(){
 }
 function updateMOUStatus(id,status){
   const m=DB.mous.find(x=>x.id===id);
-  if(m){m.status=status;persist();renderMOUTracker();}
+  if(m){m.status=status;sbUpsert('mous',{id:m.id,client:m.client,date:m.date,status:m.status,html:m.html||'',notes:m.notes||''});persist();renderMOUTracker();}
 }
 function updateMOUNotes(id,notes){
   const m=DB.mous.find(x=>x.id===id);
-  if(m){m.notes=notes;persist();}
+  if(m){m.notes=notes;sbUpsert('mous',{id:m.id,client:m.client,date:m.date,status:m.status,html:m.html||'',notes:m.notes||''});persist();}
 }
 function deleteMOU(id){
   DB.mous=DB.mous.filter(x=>x.id!==id);
+  sbDelete('mous',id);
   persist();renderMOUTracker();
 }
 
