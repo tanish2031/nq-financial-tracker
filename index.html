@@ -437,7 +437,10 @@ Offer Visibility Optimisation (COD/Shipping clarity)</textarea>
           <div class="fr"><div class="fg"><label class="lbl">PAN</label><input class="inp" id="st-pan" value="ABDCA1424H"></div><div class="fg"><label class="lbl">Invoice Prefix</label><input class="inp" id="st-prefix" value="AE"></div></div>
           <div class="fr"><div class="fg"><label class="lbl">State</label><input class="inp" id="st-state" value="Delhi"></div><div class="fg"><label class="lbl">Payment Terms (days)</label><input class="inp" id="st-terms" type="number" value="15"></div></div>
           <div class="fr"><div class="fg"><label class="lbl">Email</label><input class="inp" id="st-email" value="contact@aievoked.com"></div><div class="fg"><label class="lbl">Phone</label><input class="inp" id="st-phone" value="+91 92661 01567"></div></div>
-          <div class="fg"><label class="lbl">Address</label><input class="inp" id="st-addr" value="12-E, PKT-1, Second Floor, Mayur Vihar Phase-I, East Delhi, New Delhi - 110091"></div>
+          <div class="fg"><label class="lbl">Street Address</label><input class="inp" id="st-addr" value="12-E, PKT-1, Second Floor, Mayur Vihar Phase-I, East Delhi"></div>
+          <div class="fr"><div class="fg"><label class="lbl">City</label><input class="inp" id="st-city" value="New Delhi"></div><div class="fg"><label class="lbl">PIN Code</label><input class="inp" id="st-pin" value="110091"></div></div>
+          <div class="fr"><div class="fg"><label class="lbl">Company Name (New / Legal)</label><input class="inp" id="st-namew" placeholder="Updated legal name after change"></div><div class="fg"><label class="lbl">Name Change Effective Date</label><input class="inp" type="date" id="st-namedate"></div></div>
+          <div class="fg"><label class="lbl">Invoice Terms & Conditions</label><textarea class="inp" id="st-terms-text" rows="4" style="resize:vertical;font-size:13px;line-height:1.5"></textarea></div>
         </div></div>
         <div class="card"><div class="ch"><span class="ct">Bank & Payment</span></div><div class="cb" style="display:flex;flex-direction:column;gap:12px">
           <div class="fr"><div class="fg"><label class="lbl">Bank Name</label><input class="inp" id="st-bank" value="Kotak Mahindra Bank Limited"></div><div class="fg"><label class="lbl">Account Number</label><input class="inp" id="st-acc" value="8750530938"></div></div>
@@ -484,6 +487,10 @@ Offer Visibility Optimisation (COD/Shipping clarity)</textarea>
               </div>
             </div>
           </div>
+        </div></div>
+        <div class="card"><div class="ch"><span class="ct">User Accounts</span></div><div class="cb" style="display:flex;flex-direction:column;gap:14px">
+          <div style="font-size:13px;color:var(--text2);margin-bottom:2px">Change display names and passwords for each login. Usernames cannot be changed.</div>
+          <div id="st-users-list" style="display:flex;flex-direction:column;gap:12px"></div>
         </div></div>
         <button class="btn btn-p" onclick="saveSettings()">Save Settings</button>
       </div>
@@ -745,6 +752,8 @@ async function syncFromDB(){
     }
     // Restore saved company profile from settings (manual saves override ae_*)
     if(DB.settings.co){try{const c=typeof DB.settings.co==='string'?JSON.parse(DB.settings.co):DB.settings.co;Object.assign(CO,c);}catch(e){}}
+    // Restore saved user accounts
+    if(st.data){const usersRow=st.data.find(r=>r.key==='users');if(usersRow&&usersRow.value){try{const u=typeof usersRow.value==='string'?JSON.parse(usersRow.value):usersRow.value;if(Array.isArray(u)&&u.length)DB.settings.users=u;}catch(e){}}}
     persist();
     // re-render active tab
     const active=document.querySelector('.ni.active');
@@ -1662,7 +1671,8 @@ function doLogin(){
   const u=(document.getElementById('l-user').value||'').trim().toLowerCase();
   const p=document.getElementById('l-pass').value;
   const remember=document.getElementById('l-remember').checked;
-  const found=USERS.find(x=>x.user===u&&x.pass===p);
+  const activeUsers=DB.settings.users&&DB.settings.users.length?DB.settings.users:USERS;
+  const found=activeUsers.find(x=>x.user===u&&x.pass===p);
   const err=document.getElementById('login-err');
   if(!found){err.textContent='Invalid username or password.';err.style.display='block';document.getElementById('l-pass').value='';return;}
   err.style.display='none';
@@ -2347,7 +2357,15 @@ function saveSettings(){
   CO.state=v('st-state')||CO.state;
   CO.email=v('st-email')||CO.email;
   CO.phone=v('st-phone')||CO.phone;
-  CO.address=v('st-addr').split(',')[0]||CO.address;
+  if(v('st-addr'))CO.address=v('st-addr');
+  if(v('st-city'))CO.city=v('st-city');
+  if(v('st-pin'))CO.pin=v('st-pin');
+  const nameNew=v('st-namew');
+  if(nameNew)CO.nameNew=nameNew;
+  const nameDate=v('st-namedate');
+  if(nameDate)CO.nameChangeDate=nameDate;
+  const termsText=g('st-terms-text')?.value?.trim();
+  if(termsText)CO.terms=termsText;
   CO.bankName=v('st-bank')||CO.bankName;
   CO.bankAcc=v('st-acc')||CO.bankAcc;
   CO.bankIfsc=v('st-ifsc')||CO.bankIfsc;
@@ -2356,9 +2374,24 @@ function saveSettings(){
   if(prefix)DB.settings.invPrefix=prefix;
   const terms=parseInt(g('st-terms')?.value)||30;
   DB.settings.defaultTerms=terms;
+  // Save user accounts
+  const userList=document.querySelectorAll('.st-user-row');
+  if(userList.length){
+    const users=[];
+    userList.forEach(row=>{
+      const uname=row.dataset.username;
+      const name=(row.querySelector('.st-uname')?.value||'').trim();
+      const pass=(row.querySelector('.st-upass')?.value||'').trim();
+      const initials=(row.querySelector('.st-uinit')?.value||'').trim().toUpperCase().slice(0,2);
+      const orig=USERS.find(x=>x.user===uname)||{};
+      users.push({user:uname,name:name||orig.name,pass:pass||orig.pass,initials:initials||orig.initials});
+    });
+    DB.settings.users=users;
+  }
   DB.settings.co=JSON.parse(JSON.stringify(CO));
   persist();
   sbSetting('co',JSON.stringify(CO));
+  if(DB.settings.users)sbSetting('users',JSON.stringify(DB.settings.users));
   toast('Settings saved and synced.','success');
 }
 
@@ -2371,13 +2404,27 @@ function loadSettingsForm(){
   g('st-state').value=CO.state;
   g('st-email').value=CO.email;
   g('st-phone').value=CO.phone;
-  g('st-addr').value=[CO.address,CO.city,CO.state+' - '+CO.pin].filter(Boolean).join(', ');
+  g('st-addr').value=CO.address||'';
+  g('st-city').value=CO.city||'';
+  g('st-pin').value=CO.pin||'';
+  if(g('st-namew'))g('st-namew').value=CO.nameNew||'';
+  if(g('st-namedate'))g('st-namedate').value=CO.nameChangeDate||'';
+  if(g('st-terms-text'))g('st-terms-text').value=CO.terms||'';
   g('st-bank').value=CO.bankName;
   g('st-acc').value=CO.bankAcc;
   g('st-ifsc').value=CO.bankIfsc;
   g('st-upi').value=CO.upi;
   if(DB.settings.invPrefix)g('st-prefix').value=DB.settings.invPrefix;
   if(DB.settings.defaultTerms)g('st-terms').value=DB.settings.defaultTerms;
+  // Render user rows
+  const activeUsers=DB.settings.users||USERS;
+  const ul=document.getElementById('st-users-list');
+  if(ul){ul.innerHTML=activeUsers.map(u=>`<div class="st-user-row fr" data-username="${u.user}" style="background:var(--surface2);border-radius:8px;padding:10px 12px;gap:10px">
+    <div style="min-width:70px;font-size:12px;font-weight:700;color:var(--text2);padding-top:26px">@${u.user}</div>
+    <div class="fg"><label class="lbl">Display Name</label><input class="inp st-uname" value="${u.name||''}"></div>
+    <div class="fg" style="max-width:120px"><label class="lbl">Initials</label><input class="inp st-uinit" maxlength="2" value="${u.initials||''}"></div>
+    <div class="fg"><label class="lbl">Password</label><input class="inp st-upass" type="password" placeholder="Leave blank to keep current" autocomplete="new-password"></div>
+  </div>`).join('');}
 }
 
 function renderMOUTracker(){
