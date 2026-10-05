@@ -266,13 +266,13 @@ input.inp:focus,select.inp:focus,textarea.inp:focus{border-color:var(--primary);
     <div class="section" id="sec-invoices">
       <div class="ph">
         <div><div class="pt">Invoices</div><div class="ps" id="inv-sub"></div></div>
-        <button class="btn btn-p" onclick="document.getElementById('i-num').value='';autoFillInvNum(true);openM('m-invoice')"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>New Invoice</button>
+        <button class="btn btn-p" onclick="newInvoice()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>New Invoice</button>
       </div>
       <div class="fb">
         <div class="sw_"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg><input class="si_" placeholder="Search invoice / client…" oninput="invQ=this.value;renderInvTable()"></div>
         <select class="fi" id="inv-sf" onchange="renderInvTable()"><option value="">All Status</option><option>DRAFT</option><option>SENT</option><option>PARTIALLY_PAID</option><option>PAID</option><option>OVERDUE</option><option>CANCELLED</option></select>
         <select class="fi" id="inv-cf" onchange="renderInvTable()"><option value="">All Clients</option></select>
-        <select class="fi" id="inv-sort" onchange="renderInvTable()"><option value="date-desc">Newest First</option><option value="date-asc">Oldest First</option><option value="amount-desc">Highest Amount</option><option value="amount-asc">Lowest Amount</option><option value="num-asc">Invoice # A→Z</option></select>
+        <select class="fi" id="inv-sort" onchange="renderInvTable()"><option value="date-desc">Newest First</option><option value="date-asc">Oldest First</option><option value="amount-desc">Highest Amount</option><option value="amount-asc">Lowest Amount</option><option value="num-asc">Invoice # (lowest first)</option><option value="num-desc">Invoice # (highest first)</option></select>
         <input type="date" class="fi" id="inv-df" onchange="renderInvTable()" title="From date" style="cursor:pointer">
         <input type="date" class="fi" id="inv-dt" onchange="renderInvTable()" title="To date" style="cursor:pointer">
       </div>
@@ -515,7 +515,7 @@ Offer Visibility Optimisation (COD/Shipping clarity)</textarea>
   <div class="mo" style="max-width:620px"><div class="mh"><span class="mt">New Invoice</span><button class="mc" onclick="closeM('m-invoice')">✕</button></div>
   <div class="mb">
     <div class="fr"><div class="fg"><label class="lbl">Client *</label><select class="inp" id="i-cl"></select></div><div class="fg"><label class="lbl">Invoice Number</label><input class="inp" id="i-num" placeholder="Auto-generated" style="font-family:monospace;letter-spacing:.02em"></div></div>
-    <div class="fr"><div class="fg"><label class="lbl">Invoice Date</label><input class="inp" type="date" id="i-dt" oninput="autoFillInvNum()"></div><div class="fg"><label class="lbl">Due Date</label><input class="inp" type="date" id="i-dd"></div></div>
+    <div class="fr"><div class="fg"><label class="lbl">Invoice Date</label><input class="inp" type="date" id="i-dt" oninput="autoFillInvNum();syncDueDate()"></div><div class="fg"><label class="lbl">Due Date</label><input class="inp" type="date" id="i-dd"></div></div>
     <div class="fr"><div class="fg"><label class="lbl">Tax Type</label><select class="inp" id="i-tt" onchange="calcTot()"><option value="cgst">CGST+SGST (Intrastate)</option><option value="igst">IGST (Interstate)</option></select></div><div class="fg" style="align-self:end"><button class="btn btn-o" style="width:100%;font-size:12px" onclick="autoFillInvNum(true)">↺ Auto-number</button></div></div>
     <div style="margin:12px 0 8px;font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em">Line Items</div>
     <div id="li-wrap">
@@ -1196,8 +1196,8 @@ function renderInvTable(){
   else if(sort==='date-asc')list=[...list].sort((a,b)=>a.date.localeCompare(b.date));
   else if(sort==='amount-desc')list=[...list].sort((a,b)=>b.grand-a.grand);
   else if(sort==='amount-asc')list=[...list].sort((a,b)=>a.grand-b.grand);
-  else if(sort==='num-asc')list=[...list].sort((a,b)=>a.num.localeCompare(b.num));
-  else if(sort==='num-desc')list=[...list].sort((a,b)=>b.num.localeCompare(a.num));
+  else if(sort==='num-asc')list=[...list].sort((a,b)=>invSeqKey(a.num)-invSeqKey(b.num)||String(a.num).localeCompare(String(b.num)));
+  else if(sort==='num-desc')list=[...list].sort((a,b)=>invSeqKey(b.num)-invSeqKey(a.num)||String(b.num).localeCompare(String(a.num)));
   else if(sort==='client-asc')list=[...list].sort((a,b)=>(DB.clients.find(c=>c.id===a.clientId)?.name||'').localeCompare(DB.clients.find(c=>c.id===b.clientId)?.name||''));
   else if(sort==='client-desc')list=[...list].sort((a,b)=>(DB.clients.find(c=>c.id===b.clientId)?.name||'').localeCompare(DB.clients.find(c=>c.id===a.clientId)?.name||''));
   else if(sort==='due-asc')list=[...list].sort((a,b)=>a.due.localeCompare(b.due));
@@ -1352,6 +1352,35 @@ function nextInvNum(fy,prefix){
     if(m){const n=parseInt(m[1],10);if(n>max)max=n;}
   });
   return max+1;
+}
+// Open a clean New Invoice modal (clears any leftover edit state)
+function newInvoice(){
+  const mo=document.getElementById('m-invoice');
+  delete mo.dataset.editId;
+  document.querySelector('#m-invoice .mt').textContent='New Invoice';
+  document.querySelector('#m-invoice .mf').innerHTML='<button class="btn btn-o" onclick="closeM(\'m-invoice\')">Cancel</button><button class="btn btn-o" onclick="saveInv(\'DRAFT\')">Save Draft</button><button class="btn btn-p" onclick="saveInv(\'SENT\')">Create &amp; Send</button>';
+  document.getElementById('i-tt').value='cgst';
+  document.getElementById('i-num').value='';
+  document.getElementById('li-wrap').innerHTML=`<div class="fr" style="grid-template-columns:3fr 1fr 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:8px">
+    <div class="fg"><label class="lbl">Description</label><input class="inp li-d" placeholder="Service description"></div>
+    <div class="fg"><label class="lbl">Qty</label><input class="inp li-q" type="number" value="1" oninput="calcTot()"></div>
+    <div class="fg"><label class="lbl">Rate (₹)</label><input class="inp li-r" type="number" placeholder="0" oninput="calcTot()"></div>
+    <div class="fg"><label class="lbl">Tax%</label><select class="inp li-t" onchange="calcTot()"><option value="0">0%</option><option value="5">5%</option><option value="12">12%</option><option value="18" selected>18%</option><option value="28">28%</option></select></div>
+    <button onclick="this.parentElement.remove();calcTot()" style="padding:8px;color:var(--red);border:1px solid var(--border);border-radius:6px;background:var(--surface);cursor:pointer;margin-bottom:1px">✕</button>
+  </div>`;
+  openM('m-invoice');
+  autoFillInvNum(true);
+}
+// Numeric sort key for invoice numbers: financial-year start × 100000 + sequence
+// so AI/2026-27/42 sorts above AI/2026-27/41 and above AI/2025-26/07.
+function invSeqKey(num){
+  const m=String(num||'').match(/(\d{4})-\d{2}\/0*(\d+)\s*$/);
+  return m?parseInt(m[1])*100000+parseInt(m[2]):-1;
+}
+// Set due date to invoice date + 7 days
+function syncDueDate(){
+  const dt=document.getElementById('i-dt')?.value;
+  if(dt){const d=parseLocalDate(dt);d.setDate(d.getDate()+7);document.getElementById('i-dd').value=iso(d);}
 }
 function autoFillInvNum(force){
   const numField=document.getElementById('i-num');
@@ -2861,9 +2890,14 @@ function downloadPDF(){
 function openM(id){
   document.getElementById(id).classList.remove('hidden');
   if(id==='m-invoice'){
-    const n=iso(new Date());document.getElementById('i-dt').value=n;document.getElementById('i-dd').value=iso(new Date(Date.now()+30*86400000));
-    const sel=document.getElementById('i-cl');sel.innerHTML='<option value="">Select client…</option>';
-    DB.clients.forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.name;sel.appendChild(o);});
+    const mo=document.getElementById('m-invoice');
+    // Only initialise defaults for a NEW invoice — editInv() already populated
+    // the client, dates and line items when editing, so don't overwrite them.
+    if(!mo.dataset.editId){
+      const n=iso(new Date());document.getElementById('i-dt').value=n;document.getElementById('i-dd').value=iso(new Date(Date.now()+7*86400000));
+      const sel=document.getElementById('i-cl');sel.innerHTML='<option value="">Select client…</option>';
+      DB.clients.forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.name;sel.appendChild(o);});
+    }
     calcTot();
   }
   if(id==='m-expense')document.getElementById('e-d').value=iso(new Date());
