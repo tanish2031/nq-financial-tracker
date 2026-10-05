@@ -6,7 +6,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
 :root{
-  color-scheme:light only;
+  color-scheme:light;
   --bg:#F4F5F7;
   --surface:#FFFFFF;
   --surface2:#F9FAFB;
@@ -25,6 +25,26 @@
   --shadow-lg:0 10px 40px rgba(0,0,0,.12),0 4px 8px rgba(0,0,0,.06);
   --glass:var(--surface);--glass-border:var(--border);--glass-blur:none;
   --r:10px;--sw:228px;
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0B0E14;
+  --surface:#151A23;
+  --surface2:#1C222D;
+  --border:#2A313D;
+  --border2:#3A424F;
+  --text:#E6EAF0;--text2:#9AA4B2;--text3:#6B7482;
+  --sidebar-bg:#06080C;--sidebar-border:rgba(255,255,255,.06);
+  --primary:#6E6FF8;--primary-h:#8384FA;--primary-light:rgba(110,111,248,.16);
+  --green:#34D399;--green-bg:rgba(16,185,129,.14);--green-t:#6EE7B7;
+  --amber:#FBBF24;--amber-bg:rgba(217,119,6,.16);--amber-t:#FCD34D;
+  --red:#F87171;--red-bg:rgba(220,38,38,.16);--red-t:#FCA5A5;
+  --blue:#60A5FA;--blue-bg:rgba(37,99,235,.16);--blue-t:#93C5FD;
+  --purple:#A78BFA;--purple-bg:rgba(124,58,237,.16);--purple-t:#C4B5FD;
+  --shadow:0 1px 3px rgba(0,0,0,.45),0 1px 2px rgba(0,0,0,.35);
+  --shadow-md:0 4px 16px rgba(0,0,0,.5),0 2px 4px rgba(0,0,0,.35);
+  --shadow-lg:0 10px 40px rgba(0,0,0,.6),0 4px 8px rgba(0,0,0,.4);
+  --glass:var(--surface);--glass-border:var(--border);--glass-blur:none;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;font-family:'Inter',system-ui,sans-serif;font-size:14px;background:var(--bg);color:var(--text)}
@@ -924,8 +944,17 @@ function gotoInv(status){
 }
 
 // ─── THEME ──────────────────────────────────────────────────────────────
-let isDark=window.matchMedia('(prefers-color-scheme:dark)').matches;
-function toggleTheme(){isDark=!isDark;document.documentElement.setAttribute('data-theme',isDark?'dark':'light');}
+let isDark=false;
+try{const _t=localStorage.getItem('nq_theme');isDark=_t?_t==='dark':window.matchMedia('(prefers-color-scheme:dark)').matches;}catch(e){isDark=window.matchMedia('(prefers-color-scheme:dark)').matches;}
+document.documentElement.setAttribute('data-theme',isDark?'dark':'light');
+function toggleTheme(){
+  isDark=!isDark;
+  document.documentElement.setAttribute('data-theme',isDark?'dark':'light');
+  try{localStorage.setItem('nq_theme',isDark?'dark':'light');}catch(e){}
+  // Charts bake in theme colors at draw time — re-render so they match
+  try{if(typeof renderDash==='function')renderDash();}catch(e){}
+  try{if(typeof renderProjections==='function'&&document.getElementById('proj-chart'))renderProjections();}catch(e){}
+}
 
 // ─── DASHBOARD ──────────────────────────────────────────────────────────
 let period='month';
