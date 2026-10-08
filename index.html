@@ -775,11 +775,11 @@ async function syncFromDB(){
       DB.deals=mergeById(sbDl,DB.deals).map(({_id,...r})=>r);
     }
     if(mo&&mo.data&&mo.data.length){
-      const sbMo=mo.data.map(r=>({_id:r.id,id:r.id,client:r.client||'',date:r.date||'',status:r.status||'Draft',html:r.html||'',notes:r.notes||''}));
+      const sbMo=mo.data.map(r=>({_id:r.id,id:r.id,client:r.client||'',date:r.date||'',status:r.status||'Draft',html:r.html||'',notes:r.notes||'',data:r.data||''}));
       DB.mous=mergeById(sbMo,DB.mous).map(({_id,...r})=>r);
     } else if(DB.mous&&DB.mous.length){
       // Push any local-only MOUs up to the cloud
-      DB.mous.forEach(m=>sbUpsert('mous',{id:m.id,client:m.client,date:m.date,status:m.status,html:m.html||'',notes:m.notes||''}));
+      DB.mous.forEach(m=>sbUpsert('mous',{id:m.id,client:m.client,date:m.date,status:m.status,html:m.html||'',notes:m.notes||'',data:m.data||''}));
     }
     // Push any local-only records that didn't make it to Supabase yet
     DB.clients.filter(c=>!c.supabaseId&&c.id.startsWith('c')).forEach(c=>sbUpsert('clients',{id:c.id,name:c.name,email:c.email,phone:c.phone,gstin:c.gstin,state:c.state,address:c.billingAddress}));
@@ -2314,6 +2314,121 @@ function mouDateStr(d){
   return ordinal(dt.getDate())+' day of '+dt.toLocaleString('en-IN',{month:'long'})+', '+dt.getFullYear();
 }
 
+// Preload an image (data-URI or URL) to get its natural size; resolves null on failure
+function _loadImg(src){return new Promise(res=>{if(!src)return res(null);const im=new Image();im.onload=()=>res(im);im.onerror=()=>res(null);im.src=src;});}
+
+// Build a proper, lightweight, selectable-text MOU PDF with jsPDF native text.
+// Replaces the old html2canvas image approach (which produced ~70MB blurry files).
+let _lastMouFields=null;
+async function buildMouPdf(f,filename){
+  await new Promise(r=>loadPDFLibs(r));
+  const [nqImg,aiImg]=await Promise.all([_loadImg(DB.settings.logoNQ),_loadImg(DB.settings.logoAI)]);
+  const {jsPDF}=window.jspdf;
+  const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4',compress:true});
+  const PW=pdf.internal.pageSize.getWidth(),PH=pdf.internal.pageSize.getHeight();
+  const M=18,CW=PW-M*2;
+  let y=0;
+  const startStr=new Date(f.dateVal+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric'});
+  function drawHeader(){
+    const top=16;
+    if(nqImg){const h=11,w=Math.min(h*nqImg.width/nqImg.height,32);pdf.addImage(nqImg,'PNG',M,top-7,w,h);}
+    if(aiImg){const h=11,w=Math.min(h*aiImg.width/aiImg.height,32);pdf.addImage(aiImg,'PNG',PW-M-w,top-7,w,h);}
+    pdf.setFont('helvetica','bold');pdf.setFontSize(14);pdf.setTextColor(20,20,20);
+    pdf.text('MEMORANDUM OF UNDERSTANDING',PW/2,top,{align:'center'});
+    pdf.setFont('helvetica','normal');pdf.setFontSize(9);pdf.setTextColor(95,95,95);
+    pdf.text('For '+f.spBrand+' '+f.days+'-day Growth Pilot',PW/2,top+5,{align:'center'});
+    pdf.setDrawColor(205);pdf.setLineWidth(0.3);pdf.line(M,top+9,PW-M,top+9);
+    pdf.setTextColor(17,17,17);
+    y=top+16;
+  }
+  function drawFooter(){
+    const pg=pdf.internal.getNumberOfPages();
+    pdf.setDrawColor(215);pdf.setLineWidth(0.2);pdf.line(M,PH-13,PW-M,PH-13);
+    pdf.setFont('helvetica','bold');pdf.setFontSize(8.5);pdf.setTextColor(120,120,120);
+    pdf.text((f.web||'NXTQTR.COM'),PW/2,PH-8,{align:'center'});
+    pdf.setFont('helvetica','normal');pdf.setFontSize(8);pdf.setTextColor(150,150,150);
+    pdf.text('Page '+pg,PW-M,PH-8,{align:'right'});
+    pdf.setTextColor(17,17,17);
+  }
+  function ensure(h){if(y+h>PH-18){drawFooter();pdf.addPage();drawHeader();}}
+  function para(text,o){o=o||{};const size=o.size||10.3;const indent=o.indent||0;
+    pdf.setFont('helvetica',o.italic?'italic':(o.bold?'bold':'normal'));pdf.setFontSize(size);pdf.setTextColor(17,17,17);
+    const lines=pdf.splitTextToSize(text,CW-indent);const lh=size*0.3528*1.42;
+    lines.forEach(ln=>{ensure(lh);pdf.text(ln,M+indent,y);y+=lh;});
+    y+=(o.gap==null?3:o.gap);
+  }
+  function head(text){y+=2.5;para(text,{bold:true,size:11,gap:1.5});}
+  function list(items){const size=10.3,lh=size*0.3528*1.42;pdf.setFont('helvetica','normal');pdf.setFontSize(size);
+    (items||[]).forEach(it=>{const lines=pdf.splitTextToSize(it,CW-8);lines.forEach((ln,i)=>{ensure(lh);if(i===0)pdf.text('•',M+2,y);pdf.text(ln,M+8,y);y+=lh;});});
+    y+=3;
+  }
+  drawHeader();
+  para('THIS MEMORANDUM OF UNDERSTANDING (hereinafter referred to as the "MOU") is made and entered into on this '+mouDateStr(f.dateVal)+' (the "Effective Date"),',{bold:true});
+  para('BY AND BETWEEN:',{bold:true});
+  para('1. '+f.spLegal+', a Company registered under the Companies Act, 2013, operating under the brand name '+f.spBrand+', represented by '+f.rep1+' and '+f.rep2+' (hereinafter referred to as the "Service Provider");',{bold:true});
+  para('AND',{bold:true});
+  para('2. '+f.clName+', '+f.clType+', with its principal office located at '+f.clAddr+' (hereinafter referred to as the "Client").',{bold:true});
+  para('(Collectively referred to as the "Parties" and individually as a "Party").',{bold:true,italic:true});
+  head('1. BACKGROUND & PURPOSE');
+  para('WHEREAS, the Service Provider specializes in '+f.industry+'; and WHEREAS, the Client operates an apparel brand on the Shopify platform and desires to evaluate the Service Provider’s capabilities; NOW, THEREFORE, the Parties agree to enter into a '+f.days+'-day Free Pilot (the "Pilot") to demonstrate the value of the Service Provider’s execution services without financial obligation.');
+  head('2. TERM');
+  para('The term of this MOU shall be for a fixed period of '+f.days+' ('+(f.days===7?'seven':f.days)+') consecutive days, commencing on '+startStr+'.');
+  head('3. SCOPE OF WORK (THE "PILOT")');
+  para('The Service Provider agrees to deliver the following services during the Pilot Term at no cost to the Client:');
+  head('3.1. Maintenance & Fixes:');
+  para('The Service Provider will address critical bugs, layout issues, and essential updates required to keep the store running smoothly.');
+  head('3.2. One Revenue-Focused Improvement:');
+  para('The Service Provider will execute one (1) specific "Revenue Play" or meaningful improvement designed to increase sales or conversion. This improvement will be selected based on the Client’s priorities and may include, but is not limited to:');
+  list(f.plays&&f.plays.length?f.plays:['Conversion rate optimisation','Checkout & product-page improvements']);
+  head('3.3. Reporting:');
+  para('At the conclusion of the Pilot, the Service Provider will submit a report outlining the changes made and the work shipped on store performance.');
+  head('3.4. Exclusions:');
+  para('For the avoidance of doubt, the following are strictly excluded from this Pilot:');
+  list(['Full website redesigns or new theme builds.','Custom app development or complex ERP integrations.','Performance marketing (ad management) or content creation.','Automations and Workflow optimisation']);
+  head('4. CLIENT OBLIGATIONS');
+  para('To enable the Service Provider to perform the Pilot services, the Client agrees to:');
+  para('4.1. Access: Provide timely administrative access to the Shopify Store, Google Analytics (GA4), and Meta Pixel (read-only) as required for diagnostics and implementation.');
+  head('4.2. Collaboration:');
+  para('Clearly communicate top priorities and respond to approval requests within 24 hours to ensure the '+f.days+'-day timeline is met.');
+  head('5. FEES AND CONSIDERATION');
+  head('5.1. Free of Cost:');
+  para('The Services provided under this Pilot are free of charge. The Client is under no obligation to pay any fees for the work performed during these '+f.days+' days.');
+  head('5.2. Consideration (Testimonial):');
+  para('In lieu of payment, if the Client is satisfied with the results of the Pilot, the Client agrees to provide a written or video testimonial regarding their experience with '+f.spBrand+'.');
+  head('6. CONFIDENTIALITY');
+  head('6.1. Non-Disclosure:');
+  para('The Service Provider acknowledges that they will have access to the Client’s sensitive business data (sales figures, traffic data, customer lists). The Service Provider agrees to keep all such information strictly confidential and shall not disclose it to any third parties without prior written consent.');
+  head('6.2. Use of Data:');
+  para('Data accessed will be used solely for the purpose of executing the Pilot and generating the performance report.');
+  head('7. INTELLECTUAL PROPERTY');
+  head('7.1. Client Ownership:');
+  para('Upon completion of the Pilot, the Client shall retain full ownership of all code, design elements, and content implemented on their Shopify store by the Service Provider.');
+  head('7.2. Provider IP:');
+  para('The Service Provider retains all rights to its proprietary methodologies, "Revenue Play" frameworks, and standard operating procedures used to deliver the service.');
+  head('8. NO OBLIGATION TO CONTINUE');
+  head('8.1. Non-Binding Future:');
+  para('Completing the Pilot creates no obligation for the Client to sign a monthly retainer or continue working with the Service Provider. The Client may walk away with the improvements at no cost.');
+  head('8.2. Proposal:');
+  para('Upon conclusion of the Pilot, the Service Provider may present a proposal for a monthly "Growth Partner" retainer (Lite, Core, or Plus tier) for the Client’s consideration.');
+  head('9. LIMITATION OF LIABILITY');
+  head('9.1. Commercial Effort:');
+  para('The Service Provider shall use commercially reasonable efforts to perform the services. However, the Service Provider does not guarantee specific financial results (e.g., a specific increase in revenue) as external market factors also influence performance.');
+  head('9.2. Indemnity:');
+  para('The Service Provider shall not be liable for any temporary downtime or minor disruptions caused during the implementation of fixes, provided standard backup procedures were followed.');
+  head('10. SIGNATURES');
+  para('IN WITNESS WHEREOF, the Parties have executed this Memorandum of Understanding as of the date first above written.',{bold:true});
+  ensure(44);
+  para('For '+f.spBrand+':',{bold:true,gap:2});
+  const colW=(CW-8)/2,yy=y;pdf.setFont('helvetica','normal');pdf.setFontSize(10);pdf.setTextColor(17,17,17);
+  ['Name: '+f.rep1,'Date: ________________','Sign: ________________'].forEach((l,i)=>pdf.text(l,M,yy+i*7));
+  ['Name: '+f.rep2,'Date: ________________','Sign: ________________'].forEach((l,i)=>pdf.text(l,M+colW+8,yy+i*7));
+  y=yy+3*7+8;
+  para('For Client:',{bold:true,gap:2});
+  ['Name: ____________________','Date: ________________','Sign: ________________'].forEach(l=>{ensure(7);pdf.text(l,M,y);y+=7;});
+  drawFooter();
+  pdf.save(filename);
+}
+
 function genMOU(){
   const clName=document.getElementById('mou-cl-name').value.trim()||'[Client Company Name]';
   const clType=document.getElementById('mou-cl-type').value;
@@ -2327,6 +2442,7 @@ function genMOU(){
   const web=document.getElementById('mou-web').value.trim()||'NXTQTR.COM';
   const industry=document.getElementById('mou-industry').value.trim();
   const plays=document.getElementById('mou-plays').value.trim().split('\n').filter(Boolean);
+  _lastMouFields={clName,clType,clAddr,dateVal,days,spLegal,spBrand,rep1,rep2,web,industry,plays};
   const dtObj=new Date(dateVal+'T00:00:00');
   const startStr=dtObj.toLocaleDateString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric'}).replace(/\//g,'/');
 
@@ -2441,9 +2557,9 @@ function saveMOUToList(){
   const today=new Date().toISOString().slice(0,10);
   const dup=DB.mous.find(m=>m.client===clName&&m.date===today);
   if(dup){toast('Already saved for '+clName+' today — update status in tracker below.','warn');return;}
-  const mouRecord={id:'m'+Date.now(),client:clName,date:today,status:'Draft',html:bodyContent,notes:''};
+  const mouRecord={id:'m'+Date.now(),client:clName,date:today,status:'Draft',html:bodyContent,notes:'',data:_lastMouFields?JSON.stringify(_lastMouFields):''};
   DB.mous.push(mouRecord);
-  sbUpsert('mous',{id:mouRecord.id,client:mouRecord.client,date:mouRecord.date,status:mouRecord.status,html:mouRecord.html||'',notes:''});
+  sbUpsert('mous',{id:mouRecord.id,client:mouRecord.client,date:mouRecord.date,status:mouRecord.status,html:mouRecord.html||'',notes:'',data:mouRecord.data});
   persist();
   renderMOUTracker();
   document.getElementById('m-mou').classList.add('hidden');
@@ -2451,63 +2567,31 @@ function saveMOUToList(){
 }
 function redownloadMOU(id){
   const m=DB.mous.find(x=>x.id===id);
-  if(!m||!m.html){toast('MOU content not available — regenerate from the form','warn');return;}
-  const clName=m.client||'MOU';
-  let rc=document.getElementById('_mou_render');
-  if(rc)rc.remove();
-  rc=document.createElement('div');rc.id='_mou_render';
-  rc.style.cssText='position:absolute;left:-9999px;top:0;width:794px;background:#fff;font-family:Arial,sans-serif;font-size:13px;color:#000;padding:56px 60px;box-sizing:border-box;pointer-events:none';
-  rc.innerHTML=m.html;
-  rc.querySelectorAll('*').forEach(el=>{el.style.backdropFilter='';el.style.webkitBackdropFilter='';});
-  document.body.appendChild(rc);
+  if(!m){toast('MOU not found','warn');return;}
+  let f=null;
+  if(m.data){try{f=JSON.parse(m.data);}catch(e){}}
+  if(!f){toast('This MOU was saved before the new format — open the MOU form and regenerate it to download.','warn');return;}
   toast('Generating PDF…','info');
-  loadPDFLibs(function(){
-    html2canvas(rc,{scale:2.5,useCORS:true,backgroundColor:'#ffffff',windowWidth:794,logging:false}).then(function(canvas){
-      rc.remove();
-      const{jsPDF}=window.jspdf;
-      const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-      const pw=pdf.internal.pageSize.getWidth(),ph=pdf.internal.pageSize.getHeight();
-      const ih=(canvas.height*pw)/canvas.width;
-      let y=0,rem=ih;
-      while(rem>0){if(y>0)pdf.addPage();pdf.addImage(canvas.toDataURL('image/png'),'PNG',0,y>0?-y:0,pw,ih);y+=ph;rem-=ph;}
-      pdf.save('MOU-'+clName+'.pdf');
-      toast('Downloaded MOU for '+clName,'success');
-    }).catch(function(e){rc.remove();toast('PDF failed: '+e.message,'error');});
-  });
+  buildMouPdf(f,'MOU-'+(m.client||'MOU')+'.pdf').then(()=>toast('Downloaded MOU for '+(m.client||'MOU'),'success'))
+    .catch(e=>toast('PDF failed: '+e.message,'error'));
 }
 function downloadMOU(){
   const clName=document.getElementById('mou-cl-name').value.trim()||'MOU';
   const bodyContent=document.getElementById('mou-body').innerHTML;
-  // Also save to tracker if not already saved today
+  const f=_lastMouFields;
+  // Save to tracker if not already saved today (store fields for faithful regeneration)
   const today=new Date().toISOString().slice(0,10);
   if(!DB.mous.find(m=>m.client===clName&&m.date===today)){
-    const _mou={id:'m'+Date.now(),client:clName,date:today,status:'Draft',html:bodyContent,notes:''};
+    const _mou={id:'m'+Date.now(),client:clName,date:today,status:'Draft',html:bodyContent,notes:'',data:f?JSON.stringify(f):''};
     DB.mous.push(_mou);
-    sbUpsert('mous',{id:_mou.id,client:_mou.client,date:_mou.date,status:_mou.status,html:_mou.html||'',notes:''});
+    sbUpsert('mous',{id:_mou.id,client:_mou.client,date:_mou.date,status:_mou.status,html:_mou.html||'',notes:'',data:_mou.data});
     persist();
     renderMOUTracker();
   }
-  // Render off-screen at A4 width with full padding for clean capture
-  let rc=document.getElementById('_mou_render');
-  if(rc)rc.remove();
-  rc=document.createElement('div');rc.id='_mou_render';
-  rc.style.cssText='position:absolute;left:-9999px;top:0;width:794px;background:#fff;font-family:Arial,sans-serif;font-size:13px;color:#000;padding:56px 60px;box-sizing:border-box;pointer-events:none;line-height:1.6';
-  rc.innerHTML=bodyContent;
-  rc.querySelectorAll('*').forEach(el=>{el.style.backdropFilter='';el.style.webkitBackdropFilter='';});
-  document.body.appendChild(rc);
-  loadPDFLibs(function(){
-    html2canvas(rc,{scale:2.5,useCORS:true,backgroundColor:'#ffffff',windowWidth:794,logging:false}).then(function(canvas){
-      rc.remove();
-      const{jsPDF}=window.jspdf;
-      const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-      const pw=pdf.internal.pageSize.getWidth(),ph=pdf.internal.pageSize.getHeight();
-      const ih=(canvas.height*pw)/canvas.width;
-      let y=0,rem=ih;
-      while(rem>0){if(y>0)pdf.addPage();pdf.addImage(canvas.toDataURL('image/png'),'PNG',0,y>0?-y:0,pw,ih);y+=ph;rem-=ph;}
-      pdf.save('MOU-'+clName+'.pdf');
-      toast('MOU saved & tracked for '+clName,'success');
-    }).catch(function(e){rc.remove();toast('PDF failed: '+e.message,'error');});
-  });
+  if(!f){toast('Please generate the MOU preview first','warn');return;}
+  toast('Generating PDF…','info');
+  buildMouPdf(f,'MOU-'+clName+'.pdf').then(()=>toast('MOU saved & tracked for '+clName,'success'))
+    .catch(e=>toast('PDF failed: '+e.message,'error'));
 }
 
 // ─── PDF INVOICE GENERATOR ──────────────────────────────────────────────
@@ -2637,11 +2721,11 @@ function renderMOUTracker(){
 }
 function updateMOUStatus(id,status){
   const m=DB.mous.find(x=>x.id===id);
-  if(m){m.status=status;sbUpsert('mous',{id:m.id,client:m.client,date:m.date,status:m.status,html:m.html||'',notes:m.notes||''});persist();renderMOUTracker();}
+  if(m){m.status=status;sbUpsert('mous',{id:m.id,client:m.client,date:m.date,status:m.status,html:m.html||'',notes:m.notes||'',data:m.data||''});persist();renderMOUTracker();}
 }
 function updateMOUNotes(id,notes){
   const m=DB.mous.find(x=>x.id===id);
-  if(m){m.notes=notes;sbUpsert('mous',{id:m.id,client:m.client,date:m.date,status:m.status,html:m.html||'',notes:m.notes||''});persist();}
+  if(m){m.notes=notes;sbUpsert('mous',{id:m.id,client:m.client,date:m.date,status:m.status,html:m.html||'',notes:m.notes||'',data:m.data||''});persist();}
 }
 function deleteMOU(id){
   DB.mous=DB.mous.filter(x=>x.id!==id);
