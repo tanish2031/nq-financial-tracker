@@ -135,6 +135,32 @@ tbody tr:hover{background:var(--surface2)}
 .btn-p:hover{background:var(--primary-h);box-shadow:0 4px 14px rgba(37,99,235,.32);transform:translateY(-1px)}
 .btn-o{background:var(--surface);color:var(--text);border:1px solid var(--border);box-shadow:var(--shadow)}
 .btn-o:hover{background:var(--surface2);border-color:var(--border2)}
+/* Viewer (read-only) mode: hide all create/edit/delete controls */
+body.viewer [onclick*="delConfirm"],
+body.viewer [onclick*="editInv"],
+body.viewer [onclick*="editClient"],
+body.viewer [onclick*="editExp"],
+body.viewer [onclick*="editEmp"],
+body.viewer [onclick*="editDeal"],
+body.viewer [onclick*="editPayment"],
+body.viewer [onclick*="newInvoice"],
+body.viewer [onclick*="openM('m-client')"],
+body.viewer [onclick*="openM('m-expense')"],
+body.viewer [onclick*="openM('m-emp')"],
+body.viewer [onclick*="openM('m-run-pr')"],
+body.viewer [onclick*="openM('m-deal')"],
+body.viewer [onclick*="openDeal"],
+body.viewer [onclick*="addLI"],
+body.viewer [onclick*="uploadLogo"],
+body.viewer [onclick*="removeLogo"],
+body.viewer [onclick*="saveSettings"],
+body.viewer [onclick*="saveMOUToList"],
+body.viewer [onclick*="renumber"],
+body.viewer .ph .btn-p{display:none !important;}
+body.viewer select[onchange*="updateMOU"],
+body.viewer input[onchange*="updateMOU"]{pointer-events:none;opacity:.65}
+.viewer-badge{display:none;font-size:10px;font-weight:700;color:var(--blue-t);background:var(--blue-bg);border:1px solid var(--border);padding:2px 8px;border-radius:20px;letter-spacing:.04em}
+body.viewer .viewer-badge{display:inline-flex}
 .btn svg{width:14px;height:14px}
 /* Filter bar */
 .fb{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
@@ -231,7 +257,7 @@ input.inp:focus,select.inp:focus,textarea.inp:focus{border-color:var(--primary);
     <div class="ni" data-s="settings" onclick="nav(this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96a6.7 6.7 0 00-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.6l2.03 1.58c-.05.3-.07.62-.07.95s.02.64.07.94l-2.03 1.58c-.18.14-.23.4-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.35 1.04.67 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.27 1.13-.59 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>Settings</div>
   </nav>
   <div class="sfoot">
-    <div class="urow"><div class="av" id="sb-av">R</div><div><div class="uname" id="sb-name">Rahul Sharma</div><div class="urole">Admin · Next Quarter</div></div></div>
+    <div class="urow"><div class="av" id="sb-av">R</div><div><div class="uname" id="sb-name">Rahul Sharma</div><div class="urole" id="sb-role">Admin · Next Quarter</div></div></div>
     <button class="tbtn" onclick="toggleTheme()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69zM12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"/></svg>Toggle Theme</button>
     <button class="tbtn" onclick="doLogout()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>Log Out</button>
   </div>
@@ -848,6 +874,7 @@ async function pushLocalToSupabase(){
 }
 
 function persist(){
+  if(isViewer())return; // read-only session: never write local or cloud state
   try{localStorage.setItem('nq_db',JSON.stringify(DB));}catch(e){}
 }
 
@@ -863,10 +890,11 @@ function toast(msg,type){
 }
 
 // Push a single record to Supabase (fire and forget)
-async function sbUpsert(table,data){try{const r=await sb.from(table).upsert(data);if(r.error)console.warn('sbUpsert',table,r.error.message);}catch(e){console.warn('sbUpsert',e);}}
-async function sbDelete(table,id){try{const r=await sb.from(table).delete().eq('id',id);if(r.error)console.warn('sbDelete',table,id,r.error.message);return r;}catch(e){console.warn('sbDelete',e);}}
+async function sbUpsert(table,data){if(isViewer())return;try{const r=await sb.from(table).upsert(data);if(r.error)console.warn('sbUpsert',table,r.error.message);}catch(e){console.warn('sbUpsert',e);}}
+async function sbDelete(table,id){if(isViewer())return;try{const r=await sb.from(table).delete().eq('id',id);if(r.error)console.warn('sbDelete',table,id,r.error.message);return r;}catch(e){console.warn('sbDelete',e);}}
 // Insert to a table with auto-increment integer PK; stores returned id as record.supabaseId
 async function sbInsert(table,data,localRecord){
+  if(isViewer())return;
   try{
     const{data:rows,error}=await sb.from(table).insert(data).select('id');
     if(error){console.warn('sbInsert',table,error.message);return;}
@@ -874,7 +902,7 @@ async function sbInsert(table,data,localRecord){
   }catch(e){console.warn('sbInsert',e);}
 }
 // Upsert a settings key/value pair (for shared settings like logos)
-async function sbSetting(key,value){try{await sb.from('settings').upsert({key,value},{onConflict:'key'});}catch(e){console.warn('sbSetting',e);}}
+async function sbSetting(key,value){if(isViewer())return;try{await sb.from('settings').upsert({key,value},{onConflict:'key'});}catch(e){console.warn('sbSetting',e);}}
 
 function pR(fn){fn();persist();}
 
@@ -893,6 +921,7 @@ window.addEventListener('load',()=>{
     if(s){
       var sn=document.getElementById('sb-name');if(sn)sn.textContent=s.name;
       var av=document.getElementById('sb-av');if(av)av.textContent=s.initials;
+      applyViewerMode(s.role||'admin');
       var lsc=document.getElementById('login-screen');if(lsc)lsc.style.display='none';
     }
     if(localStorage.getItem('bt-remember')==='1'&&ls){
@@ -1132,7 +1161,7 @@ function renderClients(){
   }).join('');
 }
 function filterClients(q){clQ=q;renderClients();}
-function editClient(id){
+function editClient(id){ if(viewerBlocked())return;
   const c=DB.clients.find(x=>x.id===id);if(!c)return;
   document.getElementById('c-n').value=c.name||'';
   document.getElementById('c-g').value=c.gstin||'';
@@ -1146,7 +1175,7 @@ function editClient(id){
   document.querySelector('#m-client .mt').textContent='Edit Client';
   openM('m-client');
 }
-async function deleteInvoice(id){
+async function deleteInvoice(id){ if(viewerBlocked())return;
   // Remove locally first for instant UI feedback
   DB.invoices=DB.invoices.filter(x=>x.id!==id);
   DB.payments=DB.payments.filter(x=>x.invoiceId!==id);
@@ -1158,7 +1187,7 @@ async function deleteInvoice(id){
     await sbDelete('invoices',id);
   }catch(e){console.warn('deleteInvoice sync',e);}
 }
-async function deleteClient(id){
+async function deleteClient(id){ if(viewerBlocked())return;
   const invIds=DB.invoices.filter(i=>i.clientId===id).map(i=>i.id);
   // Remove locally first so the UI updates immediately
   DB.payments=DB.payments.filter(p=>!invIds.includes(p.invoiceId));
@@ -1178,7 +1207,7 @@ async function deleteClient(id){
     await sbDelete('clients',id);
   }catch(e){console.warn('deleteClient sync',e);}
 }
-function addClient(){
+function addClient(){ if(viewerBlocked())return;
   const n=document.getElementById('c-n').value.trim();
   if(!n)return toast('Company name is required','error');
   const editId=document.getElementById('c-n').dataset.editId;
@@ -1289,25 +1318,24 @@ function openDet(id){
   document.getElementById('det-pays').innerHTML=pays.length?`<div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Payment History</div>`+pays.map(p=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px"><div><span style="font-weight:600">${p.mode}</span> · ${fmt(p.date)}<span style="color:var(--text2);margin-left:6px">${p.ref||''}</span></div><div style="display:flex;align-items:center;gap:8px;white-space:nowrap"><span class="num" style="font-weight:700;color:var(--green)">${inr(p.amount)}</span><button onclick="editPaymentFromDet('${p.id}','${id}')" style="font-size:11px;padding:2px 9px;border:1px solid var(--primary);border-radius:5px;background:var(--surface);color:var(--primary);cursor:pointer">Edit</button><button onclick="delConfirm(this,()=>deletePayment('${p.id}'))" style="font-size:11px;padding:2px 9px;border:1px solid var(--red);border-radius:5px;background:var(--surface);color:var(--red);cursor:pointer">✕</button></div></div>`).join(''):'';
   const foot=document.getElementById('det-foot');
   foot.innerHTML='';
-  if(['SENT','PARTIALLY_PAID','OVERDUE'].includes(i.status)){
+  const vw=isViewer();
+  if(!vw&&['SENT','PARTIALLY_PAID','OVERDUE'].includes(i.status)){
     const btn=document.createElement('button');btn.className='btn btn-p';btn.innerHTML='💳 Record Payment';btn.onclick=()=>{closeM('m-inv-det');setTimeout(()=>{document.getElementById('p-a').value=((i.grand-i.paid)/100).toFixed(2);document.getElementById('p-d').value=iso(new Date());openM('m-pay');},150)};
     foot.appendChild(btn);
   }
-  if(i.status==='DRAFT'){
+  if(!vw&&i.status==='DRAFT'){
     const btn=document.createElement('button');btn.className='btn btn-o';btn.textContent='Mark as Sent';btn.onclick=()=>{i.status='SENT';persist();closeM('m-inv-det');renderInvTable()};
     foot.appendChild(btn);
   }
-  const eb=document.createElement('button');eb.className='btn btn-o';eb.innerHTML='✏️ Edit Invoice';eb.onclick=()=>{closeM('m-inv-det');setTimeout(()=>editInv(id),150)};
-  foot.appendChild(eb);
+  if(!vw){const eb=document.createElement('button');eb.className='btn btn-o';eb.innerHTML='✏️ Edit Invoice';eb.onclick=()=>{closeM('m-inv-det');setTimeout(()=>editInv(id),150)};foot.appendChild(eb);}
   const pb=document.createElement('button');pb.className='btn btn-p';pb.innerHTML='📄 Generate PDF';pb.onclick=()=>{closeM('m-inv-det');setTimeout(()=>openPDF(id),150)};
   foot.appendChild(pb);
-  const db=document.createElement('button');db.className='btn';db.style.cssText='border:1px solid var(--red);color:var(--red);background:var(--surface);border-radius:7px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer';db.innerHTML='🗑 Delete';db.onclick=()=>{delConfirm(db,()=>{deleteInvoice(id);closeM('m-inv-det');});};
-  foot.appendChild(db);
+  if(!vw){const db=document.createElement('button');db.className='btn';db.style.cssText='border:1px solid var(--red);color:var(--red);background:var(--surface);border-radius:7px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer';db.innerHTML='🗑 Delete';db.onclick=()=>{delConfirm(db,()=>{deleteInvoice(id);closeM('m-inv-det');});};foot.appendChild(db);}
   const cb=document.createElement('button');cb.className='btn btn-o';cb.textContent='Close';cb.onclick=()=>closeM('m-inv-det');
   foot.appendChild(cb);
   openM('m-inv-det');
 }
-function recPay(){
+function recPay(){ if(viewerBlocked())return;
   const i=DB.invoices.find(x=>x.id===activeInv);if(!i)return;
   const amt=Math.round(parseFloat(document.getElementById('p-a').value)*100);
   const newPay={id:'p'+Date.now(),invoiceId:activeInv,date:document.getElementById('p-d').value,amount:amt,mode:document.getElementById('p-m').value,ref:document.getElementById('p-r').value};
@@ -1335,7 +1363,7 @@ function calcTot(){
     ${ig?`<div class="tl"><span>IGST</span><span class="num">${inr(tax)}</span></div>`:`<div class="tl"><span>CGST</span><span class="num">${inr(tax/2)}</span></div><div class="tl"><span>SGST</span><span class="num">${inr(tax/2)}</span></div>`}
     <div class="tl grand"><span>Grand Total</span><span class="num">${inr(g)}</span></div>`;
 }
-function saveInv(status){
+function saveInv(status){ if(viewerBlocked())return;
   const cid=document.getElementById('i-cl').value;if(!cid)return toast('Please select a client first','error');
   const ig=document.getElementById('i-tt').value==='igst';
   let sub=0,tax=0;const lines=[];
@@ -1391,7 +1419,7 @@ function nextInvNum(fy,prefix){
   return max+1;
 }
 // Open a clean New Invoice modal (clears any leftover edit state)
-function newInvoice(){
+function newInvoice(){ if(viewerBlocked())return;
   const mo=document.getElementById('m-invoice');
   delete mo.dataset.editId;
   document.querySelector('#m-invoice .mt').textContent='New Invoice';
@@ -1429,7 +1457,7 @@ function autoFillInvNum(force){
   const prefix=(DB.settings&&DB.settings.invPrefix)||'NQ';
   numField.value=`${prefix}/${fy}/${String(nextInvNum(fy,prefix)).padStart(2,'0')}`;
 }
-function editInv(id){
+function editInv(id){ if(viewerBlocked())return;
   const i=DB.invoices.find(x=>x.id===id);if(!i)return;
   const mo=document.getElementById('m-invoice');
   mo.dataset.editId=id;
@@ -1512,7 +1540,7 @@ function renderPays(){
   }).join('');
 }
 let _payReturnInv=null;
-function editPayment(id){
+function editPayment(id){ if(viewerBlocked())return;
   const p=DB.payments.find(x=>x.id===id);if(!p)return;
   _payReturnInv=null; // default: no return-to-detail unless set by editPaymentFromDet
   document.getElementById('ep-id').value=p.id;
@@ -1528,7 +1556,7 @@ function editPaymentFromDet(pid,invId){
   setTimeout(()=>{editPayment(pid);_payReturnInv=invId;},120);
 }
 // Delete a payment and refresh everything (including the open invoice detail)
-function deletePayment(id){
+function deletePayment(id){ if(viewerBlocked())return;
   const p=DB.payments.find(x=>x.id===id);if(!p)return;
   const invId=p.invoiceId;
   if(p.supabaseId)sbDelete('payments',p.supabaseId);
@@ -1545,7 +1573,7 @@ function recalcInvPaid(invId){
   else if(inv.paid>0)inv.status='PARTIALLY_PAID';
   else if(['PAID','PARTIALLY_PAID'].includes(inv.status))inv.status='SENT';
 }
-function savePayment(){
+function savePayment(){ if(viewerBlocked())return;
   const id=document.getElementById('ep-id').value;
   const p=DB.payments.find(x=>x.id===id);if(!p)return;
   p.date=document.getElementById('ep-date').value;
@@ -1641,7 +1669,7 @@ function renderExpPie(){
   const tc=dk?'#9AA4B2':'#4B5563';
   expPieC=new Chart(cv,{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:2,borderColor:dk?'#151A23':'#fff'}]},options:{responsive:true,maintainAspectRatio:false,cutout:'58%',plugins:{legend:{position:'right',labels:{color:tc,boxWidth:12,padding:10,font:{size:12}}},tooltip:{callbacks:{label:c=>' '+c.label+': ₹'+c.parsed.toLocaleString('en-IN')+' ('+Math.round(c.parsed/data.reduce((s,x)=>s+x,0)*100)+'%)'}}}}});
 }
-function editExp(id){
+function editExp(id){ if(viewerBlocked())return;
   const e=DB.expenses.find(x=>x.id===id);if(!e)return;
   document.getElementById('e-d').value=e.date;
   document.getElementById('e-a').value=(e.amount/100).toFixed(2);
@@ -1654,7 +1682,7 @@ function editExp(id){
   document.querySelector('#m-expense .mt').textContent='Edit Expense';
   openM('m-expense');
 }
-function addExp(){
+function addExp(){ if(viewerBlocked())return;
   const a=parseFloat(document.getElementById('e-a').value);if(!a||isNaN(a))return toast('Enter a valid amount','error');
   const editId=document.getElementById('e-d').dataset.editId;
   if(editId){
@@ -1717,7 +1745,7 @@ function renderPayroll(){
     </tr>`;
   }).join('');
 }
-function addEmp(){
+function addEmp(){ if(viewerBlocked())return;
   const n=document.getElementById('em-n').value.trim();if(!n)return toast('Employee name is required','error');
   const editId=document.getElementById('m-emp').dataset.editId;
   if(editId){
@@ -1735,7 +1763,7 @@ function addEmp(){
   }
   persist();closeM('m-emp');renderPayroll();
 }
-function editEmp(id){
+function editEmp(id){ if(viewerBlocked())return;
   const e=DB.employees.find(x=>x.id===id);if(!e)return;
   const mo=document.getElementById('m-emp');
   mo.dataset.editId=id;
@@ -1749,14 +1777,14 @@ function editEmp(id){
   document.querySelector('#m-emp .mf button:last-child').textContent='Update Employee';
   openM('m-emp');
 }
-function deleteEmp(id){
+function deleteEmp(id){ if(viewerBlocked())return;
   const _emp=DB.employees.find(x=>x.id===id);
   if(_emp?.supabaseId)sbDelete('employees',_emp.supabaseId);
   DB.employees=DB.employees.filter(x=>x.id!==id);
   DB.payslips=DB.payslips.filter(x=>x.eid!==id);
   persist();renderPayroll();
 }
-function runPR(){
+function runPR(){ if(viewerBlocked())return;
   const m=parseInt(document.getElementById('rpr-m').value),y=parseInt(document.getElementById('rpr-y').value);
   let ct=0;
   DB.employees.forEach(e=>{
@@ -1847,17 +1875,34 @@ const USERS=[
   {user:'admin',   pass:'nxtqtr@2026', name:'Pragun Daniel Dass', initials:'P'},
   {user:'tanish',  pass:'nxtqtr@2026', name:'Tanish Mehta',       initials:'T'},
   {user:'nextqtr', pass:'pilot@2026',  name:'Next Quarter',        initials:'N'},
+  {user:'viewer',  pass:'view@2026',   name:'Viewer',              initials:'V', role:'viewer'},
 ];
+// ── VIEWER (read-only) MODE ──────────────────────────────────────────────
+window.SESSION_ROLE='admin';
+function isViewer(){return window.SESSION_ROLE==='viewer';}
+// Blocks a mutating action for viewers; returns true if blocked
+function viewerBlocked(){if(isViewer()){toast('Viewer access — editing is disabled','warn');return true;}return false;}
+function applyViewerMode(role){
+  window.SESSION_ROLE=role||'admin';
+  document.body.classList.toggle('viewer',isViewer());
+  const r=document.getElementById('sb-role');
+  if(r)r.textContent=isViewer()?'Viewer · read-only':'Admin · Next Quarter';
+}
 function doLogin(){
   const u=(document.getElementById('l-user').value||'').trim().toLowerCase();
   const p=document.getElementById('l-pass').value;
   const remember=document.getElementById('l-remember').checked;
-  const activeUsers=DB.settings.users&&DB.settings.users.length?DB.settings.users:USERS;
-  const found=activeUsers.find(x=>x.user===u&&x.pass===p);
+  // Merge built-in accounts with any saved edits: saved entries override by
+  // username, but built-ins missing from the saved list (e.g. the viewer) stay available.
+  const byUser={};
+  USERS.forEach(x=>byUser[x.user]={...x});
+  (DB.settings.users||[]).forEach(x=>byUser[x.user]={...byUser[x.user],...x});
+  const found=Object.values(byUser).find(x=>x.user===u&&x.pass===p);
   const err=document.getElementById('login-err');
   if(!found){err.textContent='Invalid username or password.';err.style.display='block';document.getElementById('l-pass').value='';return;}
   err.style.display='none';
-  const sess={name:found.name,initials:found.initials};
+  const sess={name:found.name,initials:found.initials,role:found.role||'admin'};
+  applyViewerMode(sess.role);
   try{
     if(remember){
       localStorage.setItem('bt-user',JSON.stringify(sess));
@@ -1874,6 +1919,7 @@ function doLogin(){
 }
 function doLogout(){
   try{sessionStorage.removeItem('bt-user');localStorage.removeItem('bt-user');localStorage.removeItem('bt-remember');}catch(e){}
+  applyViewerMode('admin');
   document.getElementById('l-user').value='';
   document.getElementById('l-pass').value='';
   document.getElementById('l-remember').checked=false;
@@ -2266,7 +2312,7 @@ function resetDealForm(){
   document.getElementById('deal-end').value='';
   document.getElementById('deal-notes').value='';
 }
-function saveDeal(){
+function saveDeal(){ if(viewerBlocked())return;
   const client=document.getElementById('deal-client').value.trim();
   const mrr=parseFloat(document.getElementById('deal-mrr').value)||0;
   if(!client||!mrr){toast('Client name and MRR are required.','error');return;}
@@ -2288,7 +2334,7 @@ function saveDeal(){
   renderProjections();
 }
 
-function editDeal(id){
+function editDeal(id){ if(viewerBlocked())return;
   const d=DB.deals.find(x=>String(x.id)===String(id));if(!d)return;
   document.getElementById('deal-modal-title').textContent='Edit Deal';
   document.getElementById('deal-id').value=d.id;
@@ -2302,7 +2348,7 @@ function editDeal(id){
   openM('m-deal');
 }
 
-function deleteDeal(id){
+function deleteDeal(id){ if(viewerBlocked())return;
   sbDelete('deals',String(id));DB.deals=DB.deals.filter(d=>String(d.id)!==String(id));persist();
   renderProjections();
 }
@@ -2550,7 +2596,7 @@ function genMOU(){
   document.getElementById('m-mou').classList.remove('hidden');
 }
 
-function saveMOUToList(){
+function saveMOUToList(){ if(viewerBlocked())return;
   const clName=document.getElementById('mou-cl-name').value.trim()||'Unknown Client';
   const bodyContent=document.getElementById('mou-body').innerHTML;
   // Check if already saved (same client + same day) to avoid duplicates
@@ -2581,7 +2627,7 @@ function downloadMOU(){
   const f=_lastMouFields;
   // Save to tracker if not already saved today (store fields for faithful regeneration)
   const today=new Date().toISOString().slice(0,10);
-  if(!DB.mous.find(m=>m.client===clName&&m.date===today)){
+  if(!isViewer()&&!DB.mous.find(m=>m.client===clName&&m.date===today)){
     const _mou={id:'m'+Date.now(),client:clName,date:today,status:'Draft',html:bodyContent,notes:'',data:f?JSON.stringify(f):''};
     DB.mous.push(_mou);
     sbUpsert('mous',{id:_mou.id,client:_mou.client,date:_mou.date,status:_mou.status,html:_mou.html||'',notes:'',data:_mou.data});
@@ -2615,7 +2661,7 @@ function coNameFor(dateStr){
   return(dateStr&&dateStr>CO.nameChangeDate)?CO.nameNew:CO.nameOld;
 }
 
-function saveSettings(){
+function saveSettings(){ if(viewerBlocked())return;
   const g=id=>document.getElementById(id);
   const v=id=>(g(id)?.value||'').trim();
   const coname=v('st-coname');
@@ -2719,15 +2765,15 @@ function renderMOUTracker(){
       </td>
     </tr>`).join('');
 }
-function updateMOUStatus(id,status){
+function updateMOUStatus(id,status){ if(viewerBlocked())return;
   const m=DB.mous.find(x=>x.id===id);
   if(m){m.status=status;sbUpsert('mous',{id:m.id,client:m.client,date:m.date,status:m.status,html:m.html||'',notes:m.notes||'',data:m.data||''});persist();renderMOUTracker();}
 }
-function updateMOUNotes(id,notes){
+function updateMOUNotes(id,notes){ if(viewerBlocked())return;
   const m=DB.mous.find(x=>x.id===id);
   if(m){m.notes=notes;sbUpsert('mous',{id:m.id,client:m.client,date:m.date,status:m.status,html:m.html||'',notes:m.notes||'',data:m.data||''});persist();}
 }
-function deleteMOU(id){
+function deleteMOU(id){ if(viewerBlocked())return;
   DB.mous=DB.mous.filter(x=>x.id!==id);
   sbDelete('mous',id);
   persist();renderMOUTracker();
@@ -2775,7 +2821,7 @@ function renderSettingsLogo(){
     else{if(img){img.src='';img.style.display='none';}if(ph)ph.style.display='';}
   });
 }
-function uploadLogo(input,key){
+function uploadLogo(input,key){ if(viewerBlocked())return;
   if(!input.files||!input.files[0])return;
   const file=input.files[0];
   if(file.size>2*1024*1024){toast('Logo must be under 2 MB','error');return;}
@@ -2794,7 +2840,7 @@ function uploadLogo(input,key){
   };
   reader.readAsDataURL(file);
 }
-function removeLogo(key){
+function removeLogo(key){ if(viewerBlocked())return;
   if(key==='nq')DB.settings.logoNQ='';
   else DB.settings.logoAI='';
   const img=document.getElementById(`logo-${key}-img`);
