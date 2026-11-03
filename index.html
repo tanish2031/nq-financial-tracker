@@ -275,9 +275,9 @@ input.inp:focus,select.inp:focus,textarea.inp:focus{border-color:var(--primary);
       <div class="ph">
         <div><div class="pt">Dashboard</div><div class="ps" id="dash-fy-label">Next Quarter · AI Evoked</div></div>
         <div class="pb" id="pb">
-          <button class="pbb active" onclick="setPeriod('month',this)">This Month</button>
+          <button class="pbb" onclick="setPeriod('month',this)">This Month</button>
           <button class="pbb" onclick="setPeriod('quarter',this)">Quarter</button>
-          <button class="pbb" onclick="setPeriod('fy',this)">Full Year</button>
+          <button class="pbb active" onclick="setPeriod('fy',this)">Full Year</button>
         </div>
       </div>
       <div class="sg">
@@ -992,7 +992,7 @@ function toggleTheme(){
 }
 
 // ─── DASHBOARD ──────────────────────────────────────────────────────────
-let period='month';
+let period='fy';
 let barC,pieC;
 function setPeriod(p,btn){period=p;document.querySelectorAll('.pbb').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderDash();}
 function getPR(){
