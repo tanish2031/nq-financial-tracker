@@ -2870,8 +2870,17 @@ function openPDF(id){
   // Helper for editable span
   const e=(val,id)=>`<span contenteditable="true" class="editable" id="pe-${id}" onblur="pdfFieldChange()" spellcheck="false">${val||''}</span>`;
 
+  // Some older/synced invoices have no line items stored — rebuild a single
+  // line from the invoice's stored totals so the PDF never renders as ₹0.
+  let lines=i.lines;
+  if(!lines||!lines.length){
+    const sub=i.subtotal||0,tx=i.totalTax||0,gr=i.grand||(sub+tx);
+    const base=sub>0?sub:gr;
+    const taxPct=sub>0?Math.round(tx/sub*100):0;
+    lines=[{desc:(i.notes&&i.notes.trim())||'Professional Services',hsn:'998313',qty:1,rate:base,tax:taxPct,total:gr}];
+  }
   // Build line items rows
-  let liRows=i.lines.map((l,idx)=>`
+  let liRows=lines.map((l,idx)=>`
     <tr id="pli-${idx}">
       <td style="text-align:center">${idx+1}</td>
       <td><span contenteditable="true" class="editable" id="pe-li-desc-${idx}" onblur="pdfRecalc()">${l.desc}</span></td>
